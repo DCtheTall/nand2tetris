@@ -41,19 +41,15 @@ CHIP ALU {
         ng; // 1 if (out < 0),  0 otherwise
 
     PARTS:
-    // Get a bus of all zeros
-    Not16(in=x, out=notx);
-    And16(a=x, b=notx, out=zeros);
-
     // Apply zx
-    Mux16(a=x, b=zeros, sel=zx, out=zxout);
+    Mux16(a=x, b=false, sel=zx, out=zxout);
 
     // Apply nx
     Not16(in=zxout, out=nzxout);
     Mux16(a=zxout, b=nzxout, sel=nx, out=nxout);
 
     // Apply zy
-    Mux16(a=y, b=zeros, sel=zy, out=zyout);
+    Mux16(a=y, b=false, sel=zy, out=zyout);
 
     // Apply ny
     Not16(in=zyout, out=nzyout);
