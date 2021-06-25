@@ -16,11 +16,11 @@
 // Pseudocode algorithm
 // OUTER_LOOP
 //   if @KBD == 0:
-//     for i in {@SCREEN, @SCREEN + 1, ..., @SCREEN + 8191}:
-//       RAM[i] = 0
+//     @color = 0
 //   else
-//     for i in {@SCREEN, @SCREEN + 1, ..., @SCREEN + 8191}:
-//       RAM[i] = -1
+//     @color = -1
+//   for i in range{0, 1, ..., 8191}:
+//     RAM[@SCREEN + i] = @color
 
 (OUTER_LOOP)
   // Set @i to 0, used in either loop
