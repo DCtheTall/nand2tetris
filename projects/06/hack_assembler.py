@@ -43,8 +43,12 @@ def StripComment(line):
 
 def PreprocessInput(file_content):
   """Split the .asm content by line and remove all whitespace."""
-  return [StripComment(''.join(l.strip().split()))
-          for l in file_content.split('\n')]
+  result = []
+  for line in file_content.split('\n'):
+    line = StripComment(''.join(line.strip().split()))
+    if line:
+      result.append(line)
+  return result
 
 
 class Assembler:
@@ -78,17 +82,11 @@ class Assembler:
         'D-A': 0b010011, 'D-M': 0b010011, 'A-D': 0b000111, 'M-D': 0b000111,
         'D&A': 0b000000, 'D&M': 0b000000, 'D|A': 0b010101, 'D|M': 0b010101,
     }
-    self.a_bit_set_ = {
-        'M', '!M', '-M', 'M+1', 'M-1',
-        'D+M', 'D-M', 'M-D', 'D&M', 'D|M',
-    }
 
   def FirstPass(self):
     """First pass searches for labels and stores their address."""
     n = 0
     for i, line in enumerate(self.asm_content_):
-      if not line:
-        continue
       if line[0] != '(':
         n += 1
         continue
@@ -104,7 +102,7 @@ class Assembler:
     """Process the symbols in all lines that aren't labels."""
     for i, line in enumerate(self.asm_content_):
       self.cur_line_ = line
-      if not self.cur_line_ or i in self.labels_:
+      if i in self.labels_:
         continue
       if self.cur_line_[0] == '@':
         self.ProcessA_()
@@ -148,7 +146,7 @@ class Assembler:
 
     c_bits = self.c_bit_table_[comp] << 6
     result += c_bits
-    if comp in self.a_bit_set_:
+    if 'M' in comp:
       result += 4096  # Set a-bit
 
     if jump:
