@@ -71,38 +71,33 @@ def TranslateVMtoASM(vm_tokens: List[List[str]], file_label) -> str:
       segment = tokens[1]
       offset = int(tokens[2])
       result.extend(LoadValueToD(segment, offset, file_label))
-      result.extend([  # Push value in the D register onto the stack.
-          '@SP',
-          'A=M',
-          'M=D',
-          '@SP',
-          'M=M+1',
-      ])
+      result.extend(PushDRegisterToStack())
     elif op == 'pop':
       segment = tokens[1]
       offset = int(tokens[2])
       result.extend(LoadAddressIntoR15(segment, offset, file_label))
+      result.extend(PopStackToDRegister())
       result.extend([ 
-          # Pop the stack into the D register.
-          '@SP',
-          'AM=M-1',
-          'D=M',
           # Set the value at the address in R15.
           '@R15',
           'A=M',
           'M=D',
       ])
-    elif op == 'add' or op == 'sub':
-      result.extend([
-          '@SP',
-          'AM=M-1',
-          'D=M',
-          'A=A-1',
-          'M=M+D' if op == 'add' else 'M=M-D',
-      ])
+    elif op in ['add', 'sub', 'and', 'or']:
+      result.extend(PopStackToDRegister())
+      # Overwrite the top of the stack with the result.
+      result.append('A=A-1')
+      if op == 'add':
+        result.append('M=M+D')
+      elif op == 'sub':
+        result.append('M=M-D')
+      elif op == 'and':
+        result.append('M=M&D')
+      elif op == 'or':
+        result.append('M=M|D')
     elif op == 'neg':
       result.extend(['@SP', 'M=-M'])
-    # TODO rest of ops
+    # TODO comparison ops
     else:
       raise SyntaxError('Unexpected operation: {}'.format(op))
   result.append('')
@@ -136,6 +131,11 @@ def LoadValueToD(segment: str, offset: int, file_label: str) -> List[str]:
   ]
 
 
+def PushDRegisterToStack():
+  """Push value in the D register onto the stack."""
+  return ['@SP', 'A=M', 'M=D', '@SP', 'M=M+1']
+
+
 def LoadAddressIntoR15(segment: str, offset: int, file_label: str) -> List[str]:
   """Load the address of the pointer determined by (segment, offset) into RAM[15]."""
   result = []
@@ -163,6 +163,11 @@ def LoadAddressIntoR15(segment: str, offset: int, file_label: str) -> List[str]:
 
   result.extend(['@R15', 'M=D'])
   return result
+
+
+def PopStackToDRegister():
+  """Pop the stack into the D register."""
+  return ['@SP', 'AM=M-1', 'D=M']
 
 
 def main():
