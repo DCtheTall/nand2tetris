@@ -63,7 +63,7 @@ def FileLabel(input_path):
 
 
 def TranslateVMtoASM(vm_tokens: List[List[str]], file_label) -> str:
-  """"""
+  """Translate tokens in the VM file into Hack Assembly."""
   result = []
   for tokens in vm_tokens:
     op = tokens[0]
@@ -105,6 +105,7 @@ def TranslateVMtoASM(vm_tokens: List[List[str]], file_label) -> str:
           '@SP',
           'M=-M',
       ])
+    # TODO rest of ops
     else:
       raise SyntaxError('Unexpected operation: {}'.format(op))
   result.append('')
@@ -113,36 +114,39 @@ def TranslateVMtoASM(vm_tokens: List[List[str]], file_label) -> str:
 
 def LoadValueToD(segment: str, offset: int, file_label: str) -> List[str]:
   """Load a value from the pointer specified by (segment, offset) into the D register."""
-  result = []
-
-  # Load the offset (or constant) into the D register
-  if segment not in ['static', 'pointer', 'temp']:
-    result.extend(['@{}'.format(offset), 'D=A'])
   if segment == 'constant':
-    return result
+    return ['@{}'.format(offset), 'D=A']
+  if segment == 'temp':
+    return ['@{}'.format(5 + offset), 'D=M']
+
+  result = []
   
   if segment in SEGMENT_POINTERS:
     result.append('@{}'.format(SEGMENT_POINTERS[segment]))
-  elif segment == 'temp':
-    result.append('@{}'.format(5 + offset))
   elif segment == 'static':
-    result.append('@{}'.format('{}.{}'.format(file_label, offset)))
+    result.append('@{}.{}'.format(file_label, offset))
   elif segment == 'pointer':
     result.append('@{}'.format('THAT' if offset else 'THIS'))
   else:
     raise SyntaxError('Unexpected segment: {}'.format(segment))
 
-  if segment == 'temp':
-    result.append('D=M')
-  else:
-    result.extend(['A=M+D', 'D=M'])
+  if segment in ['static', 'pointer']:
+    result.extend(['A=M', 'D=M'])
+    return result
 
+  result.extend([
+      'D=M',
+      '@{}'.format(offset),
+      'A=A+D',
+      'D=M',
+  ])
   return result
 
 
 def LoadAddressIntoR15(segment: str, offset: int, file_label: str) -> List[str]:
-  """"""
+  """Load the address of the pointer determined by (segment, offset) into RAM[15]."""
   result = []
+
   if segment in SEGMENT_POINTERS:
     result.append('@{}'.format(SEGMENT_POINTERS[segment]))
   elif segment == 'static':
@@ -164,6 +168,7 @@ def LoadAddressIntoR15(segment: str, offset: int, file_label: str) -> List[str]:
 
 
 def main():
+  """Main function parses the arguments, translate VM code to assembly, and write the output."""
   inp_path, outp_path = ParseArguments()
   with open(inp_path, 'r') as f:
     asm_content = TranslateVMtoASM(PreprocessInput(f.read()), FileLabel(inp_path))
