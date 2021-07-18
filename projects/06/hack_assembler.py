@@ -33,8 +33,8 @@ def ParseArguments():
   return inp_path, outp_path
 
 
-def StripComment(line):
-  """Strip a comment from a line of ASM code."""
+def RemoveComment(line):
+  """Remove a comment from a line of ASM code."""
   try:
     return line[:line.index('//')]
   except ValueError:
@@ -45,7 +45,7 @@ def PreprocessInput(file_content):
   """Split the .asm content by line and remove all whitespace."""
   result = []
   for line in file_content.split('\n'):
-    line = StripComment(''.join(line.strip().split()))
+    line = RemoveComment(''.join(line.strip().split()))
     if line:
       result.append(line)
   return result
