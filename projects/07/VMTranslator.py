@@ -130,8 +130,10 @@ def LoadValueToD(segment: str, offset: int, file_label: str) -> List[str]:
     ]
   if segment != 'pointer':
     raise SyntaxError('Unexpected segment: {}'.format(segment))
-  # TODO pointer
-  return []
+  return [
+      '@{}'.format('THAT' if offset else 'THIS'),
+      'D=M',
+  ]
 
 
 def LoadAddressIntoR15(segment: str, offset: int, file_label: str) -> List[str]:
@@ -152,8 +154,10 @@ def LoadAddressIntoR15(segment: str, offset: int, file_label: str) -> List[str]:
         'D=A',
     ]
   elif segment == 'pointer':
-    # TODO pointer
-    pass
+    result = [
+        '@{}'.format('THAT' if offset else 'THIS'),
+        'D=A',
+    ]
   else:
     raise SyntaxError('Unexpected segment: {}'.format(segment))
 
