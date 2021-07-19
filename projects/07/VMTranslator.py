@@ -89,21 +89,10 @@ def TranslateVMtoASM(vm_tokens: List[List[str]], file_label) -> str:
       # R15 contains the address to save the value in the D register.
       result.extend(['@R15', 'A=M', 'M=D'])
     elif op in ['add', 'sub', 'and', 'or']:
-      result.extend(PopStackToDRegister())
-      # Overwrite the top of the stack with the result.
-      result.extend(['@SP', 'A=M-1'])
-      if op == 'add':
-        result.append('M=M+D')
-      elif op == 'sub':
-        result.append('M=M-D')
-      elif op == 'and':
-        result.append('M=M&D')
-      else:  # op == or
-        result.append('M=M|D')
-    elif op == 'neg':
-      result.extend(['@SP', 'A=M-1', 'M=-M'])
-    elif op == 'not':
-      result.extend(['@SP', 'A=M-1', 'M=!M'])
+      result.extend(BinaryOperation(op))
+    elif op in ['neg', 'not']:
+      result.extend(SetARegisterToTopOfStack())
+      result.append('M=-M' if op == 'neg' else 'M=!M')
     elif op in ['eq', 'lt', 'gt']:
       result.extend(Conditional(op, counter))
       counter += 1
@@ -173,13 +162,35 @@ def LoadAddressIntoR15(segment: str, offset: int, file_label: str) -> List[str]:
   return result
 
 
+def BinaryOperation(op: str) -> List[str]:
+  """Binary stack arithmetic operation implementation."""
+  result = []
+  result.extend(PopStackToDRegister())
+  # Overwrite the top of the stack with the result.
+  result.extend(SetARegisterToTopOfStack())
+  if op == 'add':
+    result.append('M=M+D')
+  elif op == 'sub':
+    result.append('M=M-D')
+  elif op == 'and':
+    result.append('M=M&D')
+  else:  # op == or
+    result.append('M=M|D')
+  return result
+
+
 def PopStackToDRegister() -> List[str]:
   """Pop the stack into the D register."""
   return ['@SP', 'AM=M-1', 'D=M']
 
 
+def SetARegisterToTopOfStack() -> List[str]:
+  """Set the A register to the address at the top of the stack."""
+  return ['@SP', 'A=M-1']
+
+
 def Conditional(op: str, index: int) -> List[str]:
-  """Implements a conditional """
+  """Implements a conditional operation on the stack (eq, lt, gt)"""
   if op == 'eq':
     jump_cmd = 'JEQ'
   elif op == 'lt':
@@ -187,20 +198,21 @@ def Conditional(op: str, index: int) -> List[str]:
   else:  # op == gt
     jump_cmd = 'JGT'
   result = PopStackToDRegister()
+  result.extend(SetARegisterToTopOfStack())
   result.extend([
-      '@SP',
-      'A=M-1',
       'D=M-D',
       '@InsertTrue.{}'.format(index),
       'D;{}'.format(jump_cmd),
-      '@SP',
-      'A=M-1',
+  ])
+  result.extend(SetARegisterToTopOfStack())
+  result.extend([
       'M=0',
       '@End.{}'.format(index),
       '0;JMP',
       '(InsertTrue.{})'.format(index),
-      '@SP',
-      'A=M-1',
+  ])
+  result.extend(SetARegisterToTopOfStack())
+  result.extend([
       'M=-1',
       '(End.{})'.format(index),
   ])
