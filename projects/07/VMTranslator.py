@@ -1,6 +1,14 @@
 """
 VM Translator: Stack Arithmetic and Memory Segments
 ---------------------------------------------------
+This file implements a translator from Jack VM code
+to Hack assembly language.
+
+This is part 1 of a 2-part project, this translator only
+partially supports the VM language. It supports:
+- Stack push/pop operations
+- Stack arithmetic operations: add, sub, neg, not, and, or, lt, gt
+- Memory segments
 
 """
 
