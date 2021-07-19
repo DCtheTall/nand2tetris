@@ -65,6 +65,7 @@ def FileLabel(input_path):
 def TranslateVMtoASM(vm_tokens: List[List[str]], file_label) -> str:
   """Translate tokens in the VM file into Hack Assembly."""
   result = []
+  counter = 0
   for tokens in vm_tokens:
     op = tokens[0]
     if op == 'push':
@@ -77,27 +78,27 @@ def TranslateVMtoASM(vm_tokens: List[List[str]], file_label) -> str:
       offset = int(tokens[2])
       result.extend(LoadAddressIntoR15(segment, offset, file_label))
       result.extend(PopStackToDRegister())
-      result.extend([ 
-          # Set the value at the address in R15.
-          '@R15',
-          'A=M',
-          'M=D',
-      ])
+      # R15 contains the address to save the value in the D register.
+      result.extend(['@R15', 'A=M', 'M=D'])
     elif op in ['add', 'sub', 'and', 'or']:
       result.extend(PopStackToDRegister())
       # Overwrite the top of the stack with the result.
-      result.append('A=A-1')
+      result.extend(['@SP', 'A=M-1'])
       if op == 'add':
         result.append('M=M+D')
       elif op == 'sub':
         result.append('M=M-D')
       elif op == 'and':
         result.append('M=M&D')
-      elif op == 'or':
+      else:  # op == or
         result.append('M=M|D')
     elif op == 'neg':
-      result.extend(['@SP', 'M=-M'])
-    # TODO comparison ops
+      result.extend(['@SP', 'A=M-1', 'M=-M'])
+    elif op == 'not':
+      result.extend(['@SP', 'A=M-1', 'M=!M'])
+    elif op in ['eq', 'lt', 'gt']:
+      result.extend(Conditional(op, counter))
+      counter += 1
     else:
       raise SyntaxError('Unexpected operation: {}'.format(op))
   result.append('')
@@ -131,7 +132,7 @@ def LoadValueToD(segment: str, offset: int, file_label: str) -> List[str]:
   ]
 
 
-def PushDRegisterToStack():
+def PushDRegisterToStack() -> List[str]:
   """Push value in the D register onto the stack."""
   return ['@SP', 'A=M', 'M=D', '@SP', 'M=M+1']
 
@@ -160,14 +161,42 @@ def LoadAddressIntoR15(segment: str, offset: int, file_label: str) -> List[str]:
     ]
   else:
     raise SyntaxError('Unexpected segment: {}'.format(segment))
-
   result.extend(['@R15', 'M=D'])
   return result
 
 
-def PopStackToDRegister():
+def PopStackToDRegister() -> List[str]:
   """Pop the stack into the D register."""
   return ['@SP', 'AM=M-1', 'D=M']
+
+
+def Conditional(op: str, index: int) -> List[str]:
+  """Implements a conditional """
+  if op == 'eq':
+    jump_cmd = 'JEQ'
+  elif op == 'lt':
+    jump_cmd = 'JLT'
+  else:  # op == gt
+    jump_cmd = 'JGT'
+  result = PopStackToDRegister()
+  result.extend([
+      '@SP',
+      'A=M-1',
+      'D=M-D',
+      '@InsertTrue.{}'.format(index),
+      'D;{}'.format(jump_cmd),
+      '@SP',
+      'A=M-1',
+      'M=0',
+      '@End.{}'.format(index),
+      '0;JMP',
+      '(InsertTrue.{})'.format(index),
+      '@SP',
+      'A=M-1',
+      'M=-1',
+      '(End.{})'.format(index),
+  ])
+  return result
 
 
 def main():
