@@ -21,6 +21,14 @@ import sys
 from typing import List
 
 
+SEGMENT_POINTERS = {
+    'local': 'LCL',
+    'argument': 'ARG',
+    'this': 'THIS',
+    'that': 'THAT',
+}
+
+
 class InvalidInputError(Exception):
   """Custom exception type for when users input invalid command line arguments."""
 
@@ -61,6 +69,35 @@ def ParseIOPathsFromDir(dir_path: str) -> List[str]:
   return result
 
 
+def TranslateVMFiletoASM(vm_file_path: str) -> List[str]:
+  """Translate the content of a single VM code file into assembly."""
+  with open(vm_file_path, 'r') as f:
+    vm_file_content = f.read()
+  vm_tokens = PreprocessInput(vm_file_content)
+  file_label = FileLabel(vm_file_path)
+  result = []
+  counter = 0
+  for tokens in vm_tokens:
+    op = tokens[0]
+    if op in ['push', 'pop']:
+      segment = tokens[1]
+      offset = int(tokens[2])
+      if op == 'push':
+        result.extend(PushOp(segment, offset, file_label))
+      else:
+        result.extend(PopOp(segment, offset, file_label))
+    elif op in ['add', 'sub', 'and', 'or']:
+      result.extend(BinaryOp(op))
+    elif op in ['neg', 'not']:
+      result.extend(UnaryOp(op))
+    elif op in ['eq', 'lt', 'gt']:
+      result.extend(ComparisonOp(op, counter, file_label))
+      counter += 1
+    else:
+      raise SyntaxError('Unexpected operation: {}'.format(op))
+  return result
+
+
 def PreprocessInput(file_content: str) -> List[List[str]]:
   """Split the .vm content by line, each line into tokens, and remove all comments."""
   result = []
@@ -79,14 +116,160 @@ def RemoveComment(line: str) -> str:
     return line
 
 
-def TranslateVMFiletoASM(vm_file_path: str) -> str:
-  """"""
-  return ''
+def FileLabel(input_path):
+  """Derives the file label for static memory from the input path."""
+  _, fname = os.path.split(input_path)
+  return fname[:-3]
 
 
-def TranslateVMFilesToASM(vm_file_paths: List[str]) -> str:
+def PushOp(segment: str, offset: int, file_label: str) -> List[str]:
+  """Translates a stack push operation into assembly code."""
+  result = LoadValueToD(segment, offset, file_label)
+  result.extend(PushDRegisterToStack())
+  return result
+
+
+def LoadValueToD(segment: str, offset: int, file_label: str) -> List[str]:
+  """Load a value from the pointer specified by (segment, offset) into the D register."""
+  if segment == 'constant':
+    return ['@{}'.format(offset), 'D=A']
+  if segment == 'temp':
+    return ['@{}'.format(5 + offset), 'D=M']
+  if segment in SEGMENT_POINTERS:
+    return [
+        '@{}'.format(SEGMENT_POINTERS[segment]),
+        'D=M',
+        '@{}'.format(offset),
+        'A=A+D',
+        'D=M',
+    ]
+  if segment == 'static':
+    return [
+        '@{}.{}'.format(file_label, offset),
+        'D=M',
+    ]
+  if segment != 'pointer':
+    raise SyntaxError('Unexpected segment: {}'.format(segment))
+  return [
+      '@{}'.format('THAT' if offset else 'THIS'),
+      'D=M',
+  ]
+
+def PushDRegisterToStack() -> List[str]:
+  """Push value in the D register onto the stack."""
+  return ['@SP', 'A=M', 'M=D', '@SP', 'M=M+1']
+
+
+def PopOp(segment: str, offset: int, file_label: str) -> List[str]:
+  """Translates a stack pop operation into assembly code."""
+  result = LoadAddressIntoR15(segment, offset, file_label)
+  result.extend(PopStackToDRegister())
+  return result
+
+
+def LoadAddressIntoR15(segment: str, offset: int, file_label: str) -> List[str]:
+  """Load the address of the pointer determined by (segment, offset) into RAM[15]."""
+  result = []
+  if segment == 'temp':
+    result = ['@{}'.format(5 + offset), 'D=A']
+  elif segment in SEGMENT_POINTERS:
+    result = [
+        '@{}'.format(SEGMENT_POINTERS[segment]),
+        'D=M',
+        '@{}'.format(offset),
+        'D=D+A',
+    ]
+  elif segment == 'static':
+    result = [
+        '@{}.{}'.format(file_label, offset),
+        'D=A',
+    ]
+  elif segment == 'pointer':
+    result = [
+        '@{}'.format('THAT' if offset else 'THIS'),
+        'D=A',
+    ]
+  else:
+    raise SyntaxError('Unexpected segment: {}'.format(segment))
+  result.extend(['@R15', 'M=D'])
+  return result
+
+
+def PopStackToDRegister() -> List[str]:
+  """Pop the stack into the D register."""
+  return ['@SP', 'AM=M-1', 'D=M']
+
+
+def BinaryOp(op: str) -> List[str]:
+  """Translates a binary stack arithmetic operation into assembly."""
+  result = []
+  result.extend(PopStackToDRegister())
+  # Overwrite the top of the stack with the result.
+  result.extend(SetARegisterToTopOfStack())
+  if op == 'add':
+    result.append('M=M+D')
+  elif op == 'sub':
+    result.append('M=M-D')
+  elif op == 'and':
+    result.append('M=M&D')
+  else:  # op == or
+    result.append('M=M|D')
+  return result
+
+
+def UnaryOp(op: str) -> List[str]:
+  """Translates a unary stack arithmetic operation into assembly."""
+  result = SetARegisterToTopOfStack()
+  result.append('M=-M' if op == 'neg' else 'M=!M')
+  return result
+
+
+def SetARegisterToTopOfStack() -> List[str]:
+  """Set the A register to the address at the top of the stack."""
+  return ['@SP', 'A=M-1']
+
+
+def ComparisonOp(op: str, index: int, file_label: str) -> List[str]:
+  """Translate stack arithmetic comparison operations to assembly."""
+  if op == 'eq':
+    jump_cmd = 'JEQ'
+  elif op == 'lt':
+    jump_cmd = 'JLT'
+  else:  # op == gt
+    jump_cmd = 'JGT'
+  result = PopStackToDRegister()
+  result.extend(SetARegisterToTopOfStack())
+  result.extend([
+      'D=M-D',
+      '@{}.InsertTrue.{}'.format(file_label, index),
+      'D;{}'.format(jump_cmd),
+  ])
+  result.extend(SetARegisterToTopOfStack())
+  result.extend([
+      'M=0',
+      '@{}.End.{}'.format(file_label, index),
+      '0;JMP',
+      '({}.InsertTrue.{})'.format(file_label, index),
+  ])
+  result.extend(SetARegisterToTopOfStack())
+  result.extend([
+      'M=-1',
+      '({}.End.{})'.format(file_label, index),
+  ])
+  return result
+
+
+def TranslateVMFilesToASM(vm_file_paths: List[str]) -> List[str]:
   """"""
-  return ''
+  return []
+
+
+def WriteOutput(asm_tokens: List[str], outp_path: str):
+  """Writes the resulting assembly tokens to the output .asm path."""
+  asm_tokens.append('')
+  asm_content = '\n'.join(asm_tokens)
+  with open(outp_path, 'w') as f:
+    f.write(asm_content)
 
 
 def main():
@@ -94,11 +277,10 @@ def main():
   paths = ParseIOPathsFromArguments()
   inp_paths, outp_path = paths[:-1], paths[-1]
   if len(inp_paths) == 1:
-    asm_content = TranslateVMFiletoASM(inp_paths[0])
+    asm_tokens = TranslateVMFiletoASM(inp_paths[0])
   else:
-    asm_content = TranslateVMFilesToASM(inp_paths)
-  with open(outp_path, 'w') as f:
-    f.write(asm_content)
+    asm_tokens = TranslateVMFilesToASM(inp_paths)
+  WriteOutput(asm_tokens, outp_path)
 
 if __name__ == '__main__':
   main()
