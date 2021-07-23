@@ -32,7 +32,7 @@ class InvalidInputError(Exception):
 
   def __init__(self):
     super(InvalidInputError, self).__init__(
-        'Must be called `python hack_assembler.py path/to/in.vm ')
+        'Must be called `python hack_assembler.py path/to/in.vm')
 
 
 def ParseArguments() -> Tuple[str]:
