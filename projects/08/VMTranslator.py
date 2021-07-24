@@ -93,6 +93,14 @@ def TranslateVMFiletoASM(vm_file_path: str) -> List[str]:
     elif op in ['eq', 'lt', 'gt']:
       result.extend(ComparisonOp(op, counter, file_label))
       counter += 1
+    elif op in ['label', 'goto', 'if-goto']:
+      label = tokens[1]
+      if op == 'label':
+        result.extend(LabelOp(file_label, label))
+      elif op == 'goto':
+        result.extend(GotoOp(file_label, label))
+      else:
+        result.extend(IfGotoOp(file_label, label))
     else:
       raise SyntaxError('Unexpected operation: {}'.format(op))
   return result
@@ -164,6 +172,7 @@ def PopOp(segment: str, offset: int, file_label: str) -> List[str]:
   """Translates a stack pop operation into assembly code."""
   result = LoadAddressIntoR15(segment, offset, file_label)
   result.extend(PopStackToDRegister())
+  result.extend(['@R15', 'A=M', 'M=D'])
   return result
 
 
@@ -255,6 +264,26 @@ def ComparisonOp(op: str, index: int, file_label: str) -> List[str]:
   result.extend([
       'M=-1',
       '({}.End.{})'.format(file_label, index),
+  ])
+  return result
+
+
+def LabelOp(file_label: str, label: str) -> List[str]:
+  """Translates a VM code label operation to assembly code."""
+  return ['({}.{})'.format(file_label, label)]
+
+
+def GotoOp(file_label: str, label: str) -> List[str]:
+  """Translates a VM code if operation to assembly code."""
+  return ['@{}.{}'.format(file_label, label), '0;JMP']
+
+
+def IfGotoOp(file_label: str, label: str) -> List[str]:
+  """Translates a VM code if-goto operation to assembly code."""
+  result = PopStackToDRegister()
+  result.extend([
+      '@{}.{}'.format(file_label, label),
+      'D;JNE',
   ])
   return result
 
