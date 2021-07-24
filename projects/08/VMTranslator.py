@@ -76,7 +76,8 @@ def TranslateVMFiletoASM(vm_file_path: str) -> List[str]:
   vm_tokens = PreprocessInput(vm_file_content)
   file_label = FileLabel(vm_file_path)
   result = []
-  counter = 0
+  comparison_counter = 0
+  call_counters = {}
   for tokens in vm_tokens:
     op = tokens[0]
     if op in ['push', 'pop']:
@@ -84,23 +85,36 @@ def TranslateVMFiletoASM(vm_file_path: str) -> List[str]:
       offset = int(tokens[2])
       if op == 'push':
         result.extend(PushOp(segment, offset, file_label))
-      else:
+      else:  # op == pop
         result.extend(PopOp(segment, offset, file_label))
     elif op in ['add', 'sub', 'and', 'or']:
       result.extend(BinaryOp(op))
     elif op in ['neg', 'not']:
       result.extend(UnaryOp(op))
     elif op in ['eq', 'lt', 'gt']:
-      result.extend(ComparisonOp(op, counter, file_label))
-      counter += 1
+      result.extend(ComparisonOp(op, comparison_counter, file_label))
+      comparison_counter += 1
     elif op in ['label', 'goto', 'if-goto']:
       label = tokens[1]
       if op == 'label':
         result.extend(LabelOp(file_label, label))
       elif op == 'goto':
         result.extend(GotoOp(file_label, label))
-      else:
+      else:  # op == if-goto
         result.extend(IfGotoOp(file_label, label))
+    elif op in ['function', 'call']:
+      fn_name = tokens[1]
+      n = int(tokens[2])
+      if op == 'function':
+        result.extend(FunctionOp(fn_name, n, file_label))
+      else:
+        if fn_name in call_counters:
+          call_counters[fn_name] += 1
+        else:  # op == call
+          call_counters[fn_name] = 0
+        result.extend(CallOp(fn_name, call_counters[fn_name], n))
+    elif op == 'return':
+      result.extend(ReturnOp())
     else:
       raise SyntaxError('Unexpected operation: {}'.format(op))
   return result
@@ -285,6 +299,89 @@ def IfGotoOp(file_label: str, label: str) -> List[str]:
       '@{}.{}'.format(file_label, label),
       'D;JNE',
   ])
+  return result
+
+
+def FunctionOp(fn_name: str, n_vars: int, file_label: str) -> List[str]:
+  """Translates a VM code function operation to assembly code."""
+  result = ['({})'.format(fn_name)]
+  for _ in range(n_vars):
+    result.extend(PushOp('constant', 0, file_label))
+  return result
+
+
+def CallOp(fn_name: str, index: int, n_args: int) -> List[str]:
+  """Translate a VM code call operation to assembly code."""
+  # TODO debug
+  # return_addr = '{}.ret.{}'.format(fn_name, index)
+  # result = []
+  # # Add the stack frame
+  # for addr in [return_addr, 'LCL', 'ARG', 'THIS', 'THAT']:
+  #   result.extend(['@{}'.format(addr), 'D=M'])
+  #   result.extend(PushDRegisterToStack())
+  # result.extend([
+  #     # Set ARG = SP - 5 - nArgs
+  #     '@SP',
+  #     'D=M',
+  #     '@5',
+  #     'D=D-A',
+  #     '@{}'.format(n_args),
+  #     'D=D-A',
+  #     '@ARG',
+  #     'M=D',
+  #     # Set LCL = SP
+  #     '@SP',
+  #     'D=M',
+  #     '@LCL',
+  #     'M=D',
+  #     # Go to function label
+  #     '@{}'.format(fn_name),
+  #     '0;JMP',
+  # ])
+  # return result
+  return []
+
+
+def ReturnOp() -> List[str]:
+  """Translate the VM code return operation to assembly code."""
+  # Save return address, stored in LCL-5, to R14 in case there were no arguments.
+  result = [
+      '@LCL',
+      'D=M',
+      '@5',
+      'A=D-A',
+      'D=M',
+      '@R14',
+      'M=D',
+  ]
+  # Save top of working stack to ARG+0
+  result.extend(PopStackToDRegister())
+  result.extend(['@ARG', 'A=M', 'M=D'])
+  result.extend([
+      # Set SP to ARG+1
+      '@ARG',
+      'D=M+1',
+      '@SP',
+      'M=D',
+      # Store current value in LCL in R13
+      '@LCL',
+      'D=M',
+      '@R13',
+      'M=D',
+  ])
+  # Restore segment pointers
+  for i, addr in enumerate(['THAT', 'THIS', 'ARG', 'LCL']):
+    result.extend([
+        '@R13',
+        'D=M',
+        '@{}'.format(i + 1),
+        'A=D-A',
+        'D=M',
+        '@{}'.format(addr),
+        'M=D',
+    ])
+  # Jump to return address, stored in R14
+  result.extend(['@R14', 'A=M', '0;JMP'])
   return result
 
 
