@@ -18,7 +18,7 @@ specified in the Nand2Tetris course, which includes:
 import os
 import sys
 
-from typing import List
+from typing import Dict, List
 
 
 SEGMENT_POINTERS = {
@@ -27,6 +27,15 @@ SEGMENT_POINTERS = {
     'this': 'THIS',
     'that': 'THAT',
 }
+
+# This address is used as a "data register" for the stack during pop operations.
+STACK_DATA_REGISTER = 'R15'
+# This register stores the address of the current LCL pointer when a function returns.
+# That address is used to restore segment pointers of the function's caller.
+LCL_TMP_REGISTER = 'R13'
+# This register stores the address of the label in the assembly code to resume execution
+# after a function returns in case the called function had no arguments.
+RETURN_ADDR_TMP_REGISTER = 'R14'
 
 
 class InvalidInputError(Exception):
@@ -48,6 +57,8 @@ def ParseIOPathsFromArguments() -> List[str]:
     raise InvalidInputError()
   inp_path = sys.argv[1]
   if os.path.isdir(inp_path):
+    if not inp_path.endswith('/'):
+      inp_path += '/'
     return ParseIOPathsFromDir(inp_path)
   if inp_path.endswith('.vm'):
     outp_path = inp_path.replace('.vm', '.asm')
@@ -62,14 +73,13 @@ def ParseIOPathsFromDir(dir_path: str) -> List[str]:
   if 'Sys.vm' not in vm_filenames:
     raise InvalidInputError('Directory must contain a Sys.vm file')
   result = [os.path.join(dir_path, fname) for fname in vm_filenames]
-  result.extend(vm_filenames)
   dirname = os.path.split(dir_path)[0].split('/')[-1]
   outp_path = os.path.join(dir_path, dirname + '.asm')
   result.append(outp_path)
   return result
 
 
-def TranslateVMFiletoASM(vm_file_path: str) -> List[str]:
+def TranslateVMFiletoASM(vm_file_path: str, call_counts: Dict[str, int]) -> List[str]:
   """Translate the content of a single VM code file into assembly."""
   with open(vm_file_path, 'r') as f:
     vm_file_content = f.read()
@@ -77,7 +87,6 @@ def TranslateVMFiletoASM(vm_file_path: str) -> List[str]:
   file_label = FileLabel(vm_file_path)
   result = []
   comparison_counter = 0
-  call_counters = {}
   for tokens in vm_tokens:
     op = tokens[0]
     if op in ['push', 'pop']:
@@ -107,12 +116,12 @@ def TranslateVMFiletoASM(vm_file_path: str) -> List[str]:
       n = int(tokens[2])
       if op == 'function':
         result.extend(FunctionOp(fn_name, n, file_label))
-      else:
-        if fn_name in call_counters:
-          call_counters[fn_name] += 1
-        else:  # op == call
-          call_counters[fn_name] = 0
-        result.extend(CallOp(fn_name, call_counters[fn_name], n))
+      else:  # op == call
+        try:
+          call_counts[fn_name] += 1
+        except KeyError:
+          call_counts[fn_name] = 0
+        result.extend(CallOp(fn_name, call_counts[fn_name], n))
     elif op == 'return':
       result.extend(ReturnOp())
     else:
@@ -184,13 +193,13 @@ def PushDRegisterToStack() -> List[str]:
 
 def PopOp(segment: str, offset: int, file_label: str) -> List[str]:
   """Translates a stack pop operation into assembly code."""
-  result = LoadAddressIntoR15(segment, offset, file_label)
+  result = LoadAddressIntoStackDataRegister(segment, offset, file_label)
   result.extend(PopStackToDRegister())
-  result.extend(['@R15', 'A=M', 'M=D'])
+  result.extend(['@{}'.format(STACK_DATA_REGISTER), 'A=M', 'M=D'])
   return result
 
 
-def LoadAddressIntoR15(segment: str, offset: int, file_label: str) -> List[str]:
+def LoadAddressIntoStackDataRegister(segment: str, offset: int, file_label: str) -> List[str]:
   """Load the address of the pointer determined by (segment, offset) into RAM[15]."""
   result = []
   if segment == 'temp':
@@ -214,7 +223,7 @@ def LoadAddressIntoR15(segment: str, offset: int, file_label: str) -> List[str]:
     ]
   else:
     raise SyntaxError('Unexpected segment: {}'.format(segment))
-  result.extend(['@R15', 'M=D'])
+  result.extend(['@{}'.format(STACK_DATA_REGISTER), 'M=D'])
   return result
 
 
@@ -312,46 +321,49 @@ def FunctionOp(fn_name: str, n_vars: int, file_label: str) -> List[str]:
 
 def CallOp(fn_name: str, index: int, n_args: int) -> List[str]:
   """Translate a VM code call operation to assembly code."""
-  # TODO debug
-  # return_addr = '{}.ret.{}'.format(fn_name, index)
-  # result = []
-  # # Add the stack frame
-  # for addr in [return_addr, 'LCL', 'ARG', 'THIS', 'THAT']:
-  #   result.extend(['@{}'.format(addr), 'D=M'])
-  #   result.extend(PushDRegisterToStack())
-  # result.extend([
-  #     # Set ARG = SP - 5 - nArgs
-  #     '@SP',
-  #     'D=M',
-  #     '@5',
-  #     'D=D-A',
-  #     '@{}'.format(n_args),
-  #     'D=D-A',
-  #     '@ARG',
-  #     'M=D',
-  #     # Set LCL = SP
-  #     '@SP',
-  #     'D=M',
-  #     '@LCL',
-  #     'M=D',
-  #     # Go to function label
-  #     '@{}'.format(fn_name),
-  #     '0;JMP',
-  # ])
-  # return result
-  return []
+  # Add the stack frame
+  return_addr = '{}.ret.{}'.format(fn_name, index)
+  result = ['@{}'.format(return_addr), 'D=A']
+  result.extend(PushDRegisterToStack())
+  for addr in ['LCL', 'ARG', 'THIS', 'THAT']:
+    result.extend(['@{}'.format(addr), 'D=M'])
+    result.extend(PushDRegisterToStack())
+
+  result.extend([
+      # Set ARG -> SP - 5 - nArgs
+      '@SP',
+      'D=M',
+      '@5',
+      'D=D-A',
+      '@{}'.format(n_args),
+      'D=D-A',
+      '@ARG',
+      'M=D',
+      # Set LCL -> SP
+      '@SP',
+      'D=M',
+      '@LCL',
+      'M=D',
+      # Go to function label
+      '@{}'.format(fn_name),
+      '0;JMP',
+      # Label for return address
+      '({})'.format(return_addr)
+  ])
+  return result
 
 
 def ReturnOp() -> List[str]:
   """Translate the VM code return operation to assembly code."""
-  # Save return address, stored in LCL-5, to R14 in case there were no arguments.
+  # Save return address, stored in LCL-5, to RETURN_ADDR_TMP_REGISTER
+  # in case there were no arguments.
   result = [
       '@LCL',
       'D=M',
       '@5',
       'A=D-A',
       'D=M',
-      '@R14',
+      '@{}'.format(RETURN_ADDR_TMP_REGISTER),
       'M=D',
   ]
   # Save top of working stack to ARG+0
@@ -363,16 +375,16 @@ def ReturnOp() -> List[str]:
       'D=M+1',
       '@SP',
       'M=D',
-      # Store current value in LCL in R13
+      # Store current value in LCL in the LCL_TMP_REGISTER register.
       '@LCL',
       'D=M',
-      '@R13',
+      '@{}'.format(LCL_TMP_REGISTER),
       'M=D',
   ])
   # Restore segment pointers
   for i, addr in enumerate(['THAT', 'THIS', 'ARG', 'LCL']):
     result.extend([
-        '@R13',
+        '@{}'.format(LCL_TMP_REGISTER),
         'D=M',
         '@{}'.format(i + 1),
         'A=D-A',
@@ -380,14 +392,53 @@ def ReturnOp() -> List[str]:
         '@{}'.format(addr),
         'M=D',
     ])
-  # Jump to return address, stored in R14
-  result.extend(['@R14', 'A=M', '0;JMP'])
+  # Jump to return address, stored in RETURN_ADDR_TMP_REGISTER
+  result.extend(['@{}'.format(RETURN_ADDR_TMP_REGISTER), 'A=M', '0;JMP'])
   return result
 
 
 def TranslateVMFilesToASM(vm_file_paths: List[str]) -> List[str]:
-  """"""
-  return []
+  """Translates a directory of VM files into a single assembly program."""
+  idx = -1
+  call_counts = {}
+  for i, path in enumerate(vm_file_paths):
+    if path.endswith('Sys.vm'):
+      idx = i
+      break
+  if idx == -1:
+    raise FileNotFoundError('Cannot find Sys.vm')
+  vm_file_paths = vm_file_paths.copy()
+  vm_file_paths[0], vm_file_paths[idx] = vm_file_paths[idx], vm_file_paths[0]
+  result = BootCode()
+  for vm_file in vm_file_paths:
+    result.extend(TranslateVMFiletoASM(vm_file, call_counts))
+  return result
+
+
+def BootCode() -> List[str]:
+  """Boot code sets SP -> 256, LCL -> -1, ARG -> -2, THIS -> -3, THAT -> -4 and calls Sys.init"""
+  result = [
+      '@256',
+      'D=A',
+      '@SP',
+      'M=D',
+      '@LCL',
+      'M=-1',
+      '@2',
+      'D=-A',
+      '@ARG',
+      'M=D',
+      '@3',
+      'D=-A',
+      '@THIS',
+      'M=D',
+      '@4',
+      'D=-A',
+      '@THAT',
+      'M=D',
+  ]
+  result.extend(CallOp('Sys.init', 0, 0))
+  return result
 
 
 def WriteOutput(asm_tokens: List[str], outp_path: str):
@@ -403,7 +454,7 @@ def main():
   paths = ParseIOPathsFromArguments()
   inp_paths, outp_path = paths[:-1], paths[-1]
   if len(inp_paths) == 1:
-    asm_tokens = TranslateVMFiletoASM(inp_paths[0])
+    asm_tokens = TranslateVMFiletoASM(inp_paths[0], {})
   else:
     asm_tokens = TranslateVMFilesToASM(inp_paths)
   WriteOutput(asm_tokens, outp_path)
