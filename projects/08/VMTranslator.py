@@ -417,27 +417,21 @@ def TranslateVMFilesToASM(vm_file_paths: List[str]) -> List[str]:
 
 def BootCode() -> List[str]:
   """Boot code sets SP -> 256, LCL -> -1, ARG -> -2, THIS -> -3, THAT -> -4 and calls Sys.init"""
-  result = [
-      '@256',
-      'D=A',
-      '@SP',
-      'M=D',
-      '@LCL',
-      'M=-1',
-      '@2',
-      'D=-A',
-      '@ARG',
-      'M=D',
-      '@3',
-      'D=-A',
-      '@THIS',
-      'M=D',
-      '@4',
-      'D=-A',
-      '@THAT',
-      'M=D',
-  ]
+  result = BootPointer('SP', 256)
+  for ptr_name, value in [('LCL', -1), ('ARG', -2), ('THIS', -3),
+                          ('THAT', -4)]:
+    result.extend(BootPointer(ptr_name, value))
   result.extend(CallOp('Sys.init', 0, 0))
+  return result
+
+
+def BootPointer(ptr_name: str, value: int) -> List[str]:
+  """Boot the pointer to  the provided value."""
+  if value >= 0:
+    result = ['@{}'.format(value), 'D=A']
+  else:
+    result = ['@{}'.format(-value), 'D=-A']
+  result.extend(['@{}'.format(ptr_name), 'M=D'])
   return result
 
 
