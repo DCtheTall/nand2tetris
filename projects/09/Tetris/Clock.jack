@@ -1,0 +1,25 @@
+/** Clock class used to tick the animation between user inputs */
+class Clock {
+    field int period;
+    field int current;
+
+    constructor Clock new(int aPeriod) {
+        let period = aPeriod;
+        let current = 0;
+        return this;
+    }
+
+    method void dispose() {
+        do Memory.deAlloc(this);
+        return;
+    }
+
+    method bool tick() {
+        let current = current + 1;
+        if (current = period) {
+            let current = 0;
+            return true;
+        }
+        return false;
+    }
+}

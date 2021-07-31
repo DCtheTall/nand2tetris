@@ -1,0 +1,31 @@
+/** BrickQueue class handles operations for the queue of upcoming bricks yet to come into play */
+class BrickQueue {
+    field int size;
+    field Array queue;
+
+    constructor BrickQueue new(int aSize) {
+        var int i;
+
+        let size = aSize;
+        let queue = Array.new(size);
+
+        let i = 0;
+        while (i < size) {
+            // TODO use RNG
+            let queue[i] = Brick.new(i);
+            let i = i + 1;
+        }
+
+        return this;
+    }
+
+    method void dispose() {
+        do queue.dispose();
+        do Memory.deAlloc(this);
+        return;
+    }
+
+    method int getSize() { return size; }
+
+    method Brick getBrickTypeAtIndex(int i) { return queue[i]; }
+}

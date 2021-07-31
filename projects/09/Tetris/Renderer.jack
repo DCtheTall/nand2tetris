@@ -1,0 +1,120 @@
+/** Renderer class is a static class that handles rendering game state to screen */
+class Renderer {
+    static int gridTop;
+    static int gridLeft;
+    static int brickSize;
+    static int queueLeftMargin;
+    static int scoreCursorRow;
+    static int scoreCursorCol;
+
+    function void init() {
+        let gridTop = 6;
+        let gridLeft = 50;
+        let brickSize = 12;
+        let queueLeftMargin = 20;
+        let scoreCursorRow = 1;
+        let scoreCursorCol = 35;
+        return;
+    }
+
+    function void renderGameStart(GameState state) {
+        var int gridRight;
+        var int gridBottom;
+
+        var int queueLeft;
+
+        var int scoreLeft;
+
+        let gridRight = gridLeft + (state.getGridWidth() * brickSize);
+        let gridBottom = gridTop + (state.getGridHeight() * brickSize);
+
+        // Draw the outline of the grid
+        do Screen.setColor(true);
+        do Screen.drawLine(gridLeft, gridTop, gridRight, gridTop);
+        do Screen.drawLine(gridLeft, gridTop, gridLeft, gridBottom);
+        do Screen.drawLine(gridLeft, gridBottom, gridRight, gridBottom);
+        do Screen.drawLine(gridRight, gridTop, gridRight, gridBottom);
+
+        let queueLeft = gridLeft + (state.getGridWidth() * brickSize) + queueLeftMargin;
+        do Renderer.renderBrickQueue(state, queueLeft);
+
+        do Renderer.renderScore(state);
+
+        return;
+    }
+
+    function void renderBrickQueue(GameState state, int queueLeft) {
+        var int queueRight;
+        var int queueBottom;
+
+        var int i;
+        var BrickQueue queue;
+        var int qSize;
+        var Brick brickType;
+        var int brickTypeSize;
+        var int brickLeft;
+        var int brickTop;
+
+        // Draw a white rectangle over the current queue.
+        let queueRight = queueLeft + (Brick.maxShapeSize() * brickSize);
+        let queueBottom = gridTop + (state.getGridHeight() * brickSize);
+        do Screen.setColor(false);
+        do Screen.drawRectangle(queueLeft, gridTop + brickSize, queueRight, queueBottom);
+
+        // Render each brick in the queue.
+        let i = 0;
+        let queue = state.getQueue();
+        let qSize = queue.getSize();
+        while (i < qSize) {
+            let brickType = queue.getBrickTypeAtIndex(i);
+            let brickTypeSize = brickType.shapeSize();
+            let brickLeft = queueLeft + ((brickSize * (Brick.maxShapeSize() - brickTypeSize)) / 2);
+            let brickTop = brickSize + gridTop + (Brick.maxShapeSize() * i * brickSize);
+            do Renderer.renderBrickType(brickType, brickLeft, brickTop);
+            let i = i + 1;
+        }
+        return;
+    }
+
+    function void renderBrickType(Brick brick, int x, int y) {
+        var int size;
+        var int sizeSquared;
+        var Array shape;
+        var int i;
+        var int curx;
+        var int cury;
+
+        let size = brick.shapeSize();
+        let sizeSquared = size * size;
+        let shape = brick.rotatedShape();
+
+        let i = 0;
+        while (i < sizeSquared) {
+            if (shape[i]) {
+                let curx = x + (MathExt.mod(i, size) * brickSize);
+                let cury = y + ((i / size) * brickSize);
+                do Renderer.renderBrick(curx, cury);
+            }
+            let i = i + 1;
+        }
+        return;
+    }
+
+    function void renderBrick(int x, int y) {
+        do Screen.setColor(true);
+        do Screen.drawRectangle(x, y, x + brickSize, y + brickSize);
+        do Screen.setColor(false);
+        do Screen.drawLine(x, y, x + brickSize, y);
+        do Screen.drawLine(x, y, x, y + brickSize);
+        return;
+    }
+
+    function void renderScore(GameState state) {
+        do Output.moveCursor(scoreCursorRow, scoreCursorCol);
+        do Output.printString("              ");
+        do Output.moveCursor(scoreCursorRow, scoreCursorCol);
+        do Output.printString("Score: ");
+        do Output.printInt(state.getScore());
+        return;
+    }
+}

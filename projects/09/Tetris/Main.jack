@@ -1,0 +1,16 @@
+/** Main class initializes, runs, and finally disposes the event loop. */
+class Main {
+    function void main() {
+        var EventLoop eventLoop;
+        let eventLoop = EventLoop.new();
+        
+        // TODO prompt for seed
+        do Random.setSeed(12345);
+        do Renderer.init();
+        do Brick.init();
+
+        do eventLoop.run();
+        do eventLoop.dispose();
+        return;
+    }
+}

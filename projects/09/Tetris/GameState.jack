@@ -1,0 +1,43 @@
+/** GameState class encapsulates the game state and operations to modify state */
+class GameState {
+    field int gridWidth;
+    field int gridHeight;
+    field BrickQueue queue;
+    field int score;
+    field Array grid;
+
+    constructor GameState new() {
+        var int gridArea;
+        var int i;
+
+        let gridWidth = 10;
+        let gridHeight = 20;
+        let queue = BrickQueue.new(5);
+        let score = 0;
+
+        let gridArea = gridWidth * gridHeight;
+        let grid = Array.new(gridArea);
+        let i = 0;
+        while (i < gridArea) {
+            let grid[i] = false;
+            let i = i + 1;
+        }
+
+        return this;
+    }
+
+    method void dispose() {
+        do queue.dispose();
+        do grid.dispose();
+        do Memory.deAlloc(this);
+        return;
+    }
+
+    method int getGridWidth() { return gridWidth; }
+
+    method int getGridHeight() { return gridHeight; }
+
+    method BrickQueue getQueue() { return queue; }
+
+    method int getScore() { return score; }
+}

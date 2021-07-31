@@ -1,0 +1,29 @@
+class KeyInput {
+    field int key;
+
+    constructor KeyInput new(int aKey) {
+        let key = aKey;
+        return this;
+    }
+
+    method void dispose() {
+        do Memory.deAlloc(this);
+        return;
+    }
+
+    method boolean isUpArrow() { return key = 131; }
+
+    method boolean isDownArrow() { return key = 133; }
+
+    method boolean isLeftArrow() { return key = 130; }
+
+    method boolean isRightArrow() { return key = 132; }
+
+    method boolean isNoAction() {
+        return ~(isUpArrow() | isDownArrow() | isLeftArrow() | isRightArrow());
+    }
+
+    function KeyInput readInput() {
+        return KeyInput.new(Keyboard.keyPressed());
+    }
+}

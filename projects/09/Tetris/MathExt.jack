@@ -1,0 +1,17 @@
+/** Extensions for Jack's Math library */
+class MathExt {
+    /** a >= b */
+    function bool geq(int a, int b) {
+        return (a = b) | (a > b);
+    }
+
+    /** x in [a, b) */
+    function bool inRange(int x, int lo, int hi) {
+        return MathExt.geq(x, lo) & (x < hi);
+    }
+
+    /** a mod b */
+    function int mod(int a, int b) {
+        return a - (b * (a / b));
+    }
+}

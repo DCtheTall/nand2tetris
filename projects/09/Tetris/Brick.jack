@@ -1,0 +1,124 @@
+/** Brick class provides an abstraction for the different types of bricks used in the game. */
+class Brick {
+    static int nTypes;
+
+    field int type;
+    field int orientation;
+
+    constructor Brick new(int aType) {
+        let type = aType;
+        let orientation = 0;
+        return this;
+    }
+
+    method void dispose() {
+        do Memory.deAlloc(this);
+        return;
+    }
+
+    method int shapeSize() {
+        if (type = 0) {  // I-block
+            return 4;
+        }
+        if (type = 3) { // O-block
+            return 2;
+        }
+        return 3;
+    }
+
+    method Array shape() {
+        var int size;
+        var int sizeSquared;
+        var Array result;
+        var int i;
+
+        let size = shapeSize();
+        let sizeSquared = size * size;
+        let result = Array.new(sizeSquared);
+
+        let i = 0;
+        while (i < sizeSquared) {
+            let result[i] = indexInShape(i);
+            let i = i + 1;
+        }
+        return result;
+    }
+
+    method bool indexInShape(int i) {
+        if (type = 0) {
+            return MathExt.inRange(i, 4, 8);
+        }
+        if (type = 1) {  // L-block
+            return (i = 0) | MathExt.inRange(i, 3, 6);
+        }
+        if (type = 2) {  // J-block
+            return (i = 2) | MathExt.inRange(i, 3, 6);
+        }
+        if (type = 3) {  // O-block
+            return true;
+        }
+        if (type = 4) {  // S-block
+            return MathExt.inRange(i, 1, 3) | MathExt.inRange(i, 3, 5);
+        }
+        if (type = 5) {  // Z-block
+            return MathExt.inRange(i, 0, 2) | MathExt.inRange(i, 4, 6);
+        }
+        // T-block
+        return (i = 1) | MathExt.inRange(i, 3, 6);
+    }
+
+    method void rotate() {
+        let orientation = orientation + 1;
+        if (orientation = 4) {
+            let orientation = 0;
+        }
+        return;
+    }
+
+    method Array rotatedShape() {
+        var Array curShape;
+        var int i;
+        var int size;
+
+        let curShape = shape();
+        let size = shapeSize();
+        let i = 0;
+        while (i < orientation) {
+            let curShape = Brick.rotateShape(curShape, size);
+            let i = i + 1;
+        }
+
+        return curShape;
+    }
+
+    function void init() {
+        let nTypes = 7;
+        return;
+    }
+
+    // TODO fix
+    function Brick randomBrickType() {
+        return Brick.new(Random.randRange(nTypes));
+    }
+
+    function int maxShapeSize() { return 4; }
+
+    function Array rotateShape(Array prevShape, int size) {
+        var int sizeSquared;
+        var Array result;
+        var int i;
+        var int newIdx;
+
+        let sizeSquared = size * size;
+        let result = Array.new(sizeSquared);
+
+        let i = 0;
+        while (i < sizeSquared) {
+            let newIdx = (MathExt.mod(i, size) * size) + (size - 1 - (i / size));
+            let result[newIdx] = prevShape[i];
+            let i = i + 1;
+        }
+
+        return result;
+    }
+}

@@ -1,0 +1,51 @@
+/** Game event loop */
+class EventLoop {
+    field Clock clock;
+    field GameState state;
+    field bool exit;
+
+    constructor EventLoop new() {
+        let clock = Clock.new(10000);
+        let state = GameState.new();
+        // TODO exit logic
+        let exit = false;
+        return this;
+    }
+
+    method void dispose() {
+        do clock.dispose();
+        do state.dispose();
+        do Memory.deAlloc(this);
+        return;
+    }
+
+    method void run() {
+        var KeyInput input;
+        var bool previousNoAction;
+        var bool curNoAction;
+        var bool clockTicked;
+
+        do Renderer.renderGameStart(state);
+
+        let previousNoAction = false;
+
+        while (~exit) {
+            let input = KeyInput.readInput();
+            let curNoAction = input.isNoAction();
+            let clockTicked = clock.tick();
+            
+            if (~(curNoAction = previousNoAction)) {
+                if (~curNoAction) {
+                    // TODO update from action
+                }
+                let previousNoAction = curNoAction;
+            } else {
+                if (clockTicked) {
+                    // TODO update from clock tick
+                }
+            }
+            do input.dispose();
+        }
+        return;
+    }
+}
