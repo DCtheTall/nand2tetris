@@ -45,7 +45,7 @@ class FallingBrick {
     method int getBrick() { return brick; }
 
     method bool canFall(Grid grid) {
-        return (~isTouchingFloor(grid)) & (~isCollidingWithGrid(grid));
+        return (~isTouchingFloor(grid)) & (~isOnTopOfBricks(grid));
     }
 
     method bool isTouchingFloor(Grid grid) {
@@ -72,8 +72,35 @@ class FallingBrick {
         return false;
     }
 
-    // TODO
-    method bool isCollidingWithGrid(Grid grid) {
+    // collision: x, y + 1
+    method bool isOnTopOfBricks(Grid grid) {
+        var Array shape;
+        var int size;
+        var int sizeSquared;
+        var int width;
+        var int i;
+        var int gx;
+        var int gy;
+
+        let shape = brick.rotatedShape();
+        let size = brick.shapeSize();
+        let sizeSquared = size * size;
+        let width = grid.getWidth();
+
+        let i = 0;
+        while (i < sizeSquared) {
+            if (shape[i]) {
+                let gy = y + 1 + (i / size);
+                let gx = x + MathExt.mod(i, size);
+                if (grid.cellAtIndex((gy * width) + gx)) {
+                    do shape.dispose();
+                    return true;
+                }
+            }
+            let i = i + 1;
+        }
+
+        do shape.dispose();
         return false;
     }
 }

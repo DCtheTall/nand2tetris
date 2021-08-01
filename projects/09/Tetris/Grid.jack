@@ -28,7 +28,12 @@ class Grid {
 
     method int getHeight() { return height; }
 
-    method bool cellAtIndex(int i) { return grid[i]; }
+    method bool cellAtIndex(int i) {
+        if (i < 0 | MathExt.geq(i, width * height)) {
+            return false;
+        }
+        return grid[i];
+    }
 
     method void writeFallingBrickToGrid(FallingBrick fallingBrick) {
         var Brick brick;
