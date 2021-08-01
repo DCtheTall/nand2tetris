@@ -5,7 +5,7 @@ class GameLoop {
     field bool exit;
 
     constructor GameLoop new() {
-        let clock = Clock.new(500);
+        let clock = Clock.new(5000);
         let state = GameState.new();
         // TODO exit logic
         let exit = false;

@@ -62,7 +62,7 @@ class FallingBrick {
         
         let i = sizeSquared - 1;
         while (i > -1) {
-            if (shape[i] & (((i / size) + y) = height)) {
+            if (shape[i] & (((i / size) + y + 1) = height)) {
                 do shape.dispose();
                 return true;
             }

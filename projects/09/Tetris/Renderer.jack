@@ -28,10 +28,10 @@ class Renderer {
 
         // Draw the outline of the grid
         do Screen.setColor(true);
-        do Screen.drawLine(gridLeft, gridTop, gridRight, gridTop);
-        do Screen.drawLine(gridLeft, gridTop, gridLeft, gridBottom);
-        do Screen.drawLine(gridLeft, gridBottom, gridRight, gridBottom);
-        do Screen.drawLine(gridRight, gridTop, gridRight, gridBottom);
+        do Screen.drawLine(gridLeft - 1, gridTop - 1, gridRight + 1, gridTop - 1);
+        do Screen.drawLine(gridLeft - 1, gridTop - 1, gridLeft - 1, gridBottom + 1);
+        do Screen.drawLine(gridLeft - 1, gridBottom + 1, gridRight + 1, gridBottom + 1);
+        do Screen.drawLine(gridRight + 1, gridTop - 1, gridRight + 1, gridBottom + 1);
 
         do Renderer.renderState(state);
         // do grid.dispose();
@@ -43,9 +43,40 @@ class Renderer {
         var int queueLeft;
         let grid = state.getGrid();
         let queueLeft = gridLeft + (grid.getWidth() * cellSize) + queueLeftMargin;
+        do Renderer.renderGrid(state.getGrid());
         do Renderer.renderBrickQueue(state, queueLeft);
         do Renderer.renderScore(state);
         do Renderer.renderFallingBrick(state.getFallingBrick());
+        return;
+    }
+
+    function void renderGrid(Grid grid) {
+        var int width;
+        var int height;
+        var int area;
+        var int i;
+        var int x;
+        var int y;
+
+        let width = grid.getWidth();
+        let height = grid.getHeight();
+        let area = width * height;
+
+        // Draw white rectangle over entire grid.
+        do Screen.setColor(false);
+        do Screen.drawRectangle(
+                gridLeft, gridTop, gridLeft + (cellSize * width), gridTop + (cellSize * height));
+
+        let i = 0;
+        while (i < area) {
+            if (grid.cellAtIndex(i)) {
+                let x = gridLeft + (cellSize * MathExt.mod(i, width));
+                let y = gridTop + (cellSize * (i / width));
+                do Renderer.renderBrickCell(x, y);
+            }
+            let i = i + 1;
+        }
+
         return;
     }
 

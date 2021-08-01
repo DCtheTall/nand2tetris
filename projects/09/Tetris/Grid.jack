@@ -28,6 +28,8 @@ class Grid {
 
     method int getHeight() { return height; }
 
+    method bool cellAtIndex(int i) { return grid[i]; }
+
     method void writeFallingBrickToGrid(FallingBrick fallingBrick) {
         var Brick brick;
         var Array shape;
@@ -48,10 +50,7 @@ class Grid {
         let i = 0;
         while (i < sizeSquared) {
             if (shape[i]) {
-                let coord = width * y;
-                if (i > 0) {
-                    let coord = coord + ((size / i) * size);
-                }
+                let coord = width * y + ((i / size) * width);
                 let coord = coord + x + MathExt.mod(i, size);
                 let grid[coord] = true;
             }
