@@ -34,7 +34,6 @@ class Renderer {
         do Screen.drawLine(gridRight + 1, gridTop - 1, gridRight + 1, gridBottom + 1);
 
         do Renderer.renderState(state);
-        // do grid.dispose();
         return;
     }
 
@@ -46,6 +45,7 @@ class Renderer {
         do Renderer.renderGrid(state.getGrid());
         do Renderer.renderBrickQueue(state, queueLeft);
         do Renderer.renderScore(state);
+        do Renderer.renderGameOver(state);
         do Renderer.renderFallingBrick(state.getFallingBrick());
         return;
     }
@@ -161,10 +161,18 @@ class Renderer {
         return;
     }
 
+    function void renderGameOver(GameState state) {
+        if (~state.isGameOver()) {
+            return;
+        }
+        do Output.moveCursor(scoreCursorRow + 1, scoreCursorCol);
+        do Output.printString("Game over!");
+        return;
+    }
+
     function void renderFallingBrick(FallingBrick fallingBrick) {
         var int x;
         var int y;
-
         if (~fallingBrick.isSpawned()) {
             return;
         }

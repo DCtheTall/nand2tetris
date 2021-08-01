@@ -5,10 +5,8 @@ class GameLoop {
     field bool exit;
 
     constructor GameLoop new() {
-        let clock = Clock.new(5000);
+        let clock = Clock.new(500);
         let state = GameState.new();
-        // TODO exit logic
-        let exit = false;
         return this;
     }
 
@@ -28,19 +26,22 @@ class GameLoop {
         let previousNoAction = false;
         do Renderer.renderGameStart(state);
 
-        while (~exit) {
+        while (true) {
             let input = KeyInput.readInput();
             let curNoAction = input.isNoAction();
             let clockTicked = clock.tick();
             
             if (~(curNoAction = previousNoAction)) {
-                if (~curNoAction) {
+                if ((~curNoAction) & (~state.isGameOver())) {
                     // TODO update from action
                 }
                 let previousNoAction = curNoAction;
             } else {
                 if (clockTicked) {
                     do state.onClockTick();
+                    if (state.isGameOver()) {
+                        do clock.stop();
+                    }
                     do Renderer.renderState(state);
                 }
             }

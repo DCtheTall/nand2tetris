@@ -72,7 +72,8 @@ class FallingBrick {
         return false;
     }
 
-    // collision: x, y + 1
+    // TODO refactor to make a general collision algorithm usin x0, y0
+    // For this function, x0 = x, y0 = y + 1
     method bool isOnTopOfBricks(Grid grid) {
         var Array shape;
         var int size;
@@ -102,5 +103,9 @@ class FallingBrick {
 
         do shape.dispose();
         return false;
+    }
+
+    method bool gameOver(Grid grid) {
+        return isOnTopOfBricks(grid) & (y < 0);
     }
 }

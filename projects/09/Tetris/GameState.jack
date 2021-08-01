@@ -4,12 +4,14 @@ class GameState {
     field int score;
     field FallingBrick fallingBrick;
     field Grid grid;
+    field bool gameOver;
 
     constructor GameState new() {
         let queue = BrickQueue.new(5);
         let score = 0;
         let fallingBrick = FallingBrick.new(queue.dequeue());
         let grid = Grid.new(10, 20);
+        let gameOver = false;
         return this;
     }
 
@@ -29,15 +31,19 @@ class GameState {
 
     method Grid getGrid() { return grid; }
 
+    method bool isGameOver() { return gameOver; }
+
     method void onClockTick() {
-        // TODO row complete animation
+        // TODO check row animation
         if (~fallingBrick.isSpawned()) {
             do fallingBrick.spawn(grid);
         }
         if (fallingBrick.tickGravity(grid)) {
-            // TODO check game over
-            // TODO write falling brick to grid and dequeue next
             do grid.writeFallingBrickToGrid(fallingBrick);
+            if (fallingBrick.gameOver(grid)) {
+                let gameOver = true;
+                return;
+            }
             let fallingBrick = FallingBrick.new(queue.dequeue());
             // TODO check row completed, if so award points and start row animation
         }

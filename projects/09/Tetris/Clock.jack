@@ -2,10 +2,12 @@
 class Clock {
     field int period;
     field int current;
+    field bool stopped;
 
     constructor Clock new(int aPeriod) {
         let period = aPeriod;
         let current = 0;
+        let stopped = false;
         return this;
     }
 
@@ -15,11 +17,19 @@ class Clock {
     }
 
     method bool tick() {
+        if (stopped) {
+            return false;
+        }
         let current = current + 1;
         if (current = period) {
             let current = 0;
             return true;
         }
         return false;
+    }
+
+    method void stop() {
+        let stopped = true;
+        return;
     }
 }
