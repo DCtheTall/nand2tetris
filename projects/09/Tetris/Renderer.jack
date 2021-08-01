@@ -2,7 +2,7 @@
 class Renderer {
     static int gridTop;
     static int gridLeft;
-    static int brickSize;
+    static int cellSize;
     static int queueLeftMargin;
     static int scoreCursorRow;
     static int scoreCursorCol;
@@ -10,23 +10,21 @@ class Renderer {
     function void init() {
         let gridTop = 6;
         let gridLeft = 50;
-        let brickSize = 12;
+        let cellSize = 12;
         let queueLeftMargin = 20;
-        let scoreCursorRow = 1;
+        let scoreCursorRow = 2;
         let scoreCursorCol = 35;
         return;
     }
 
     function void renderGameStart(GameState state) {
+        var Grid grid;
         var int gridRight;
         var int gridBottom;
 
-        var int queueLeft;
-
-        var int scoreLeft;
-
-        let gridRight = gridLeft + (state.getGridWidth() * brickSize);
-        let gridBottom = gridTop + (state.getGridHeight() * brickSize);
+        let grid = state.getGrid();
+        let gridRight = gridLeft + (grid.getWidth() * cellSize);
+        let gridBottom = gridTop + (grid.getHeight() * cellSize);
 
         // Draw the outline of the grid
         do Screen.setColor(true);
@@ -35,16 +33,25 @@ class Renderer {
         do Screen.drawLine(gridLeft, gridBottom, gridRight, gridBottom);
         do Screen.drawLine(gridRight, gridTop, gridRight, gridBottom);
 
-        let queueLeft = gridLeft + (state.getGridWidth() * brickSize) + queueLeftMargin;
+        do Renderer.renderState(state);
+        // do grid.dispose();
+        return;
+    }
+
+    function void renderState(GameState state) {
+        var Grid grid;
+        var int queueLeft;
+        let grid = state.getGrid();
+        let queueLeft = gridLeft + (grid.getWidth() * cellSize) + queueLeftMargin;
         do Renderer.renderBrickQueue(state, queueLeft);
-
         do Renderer.renderScore(state);
-
+        do Renderer.renderFallingBrick(state.getFallingBrick());
         return;
     }
 
     function void renderBrickQueue(GameState state, int queueLeft) {
         var int queueRight;
+        var Grid grid;
         var int queueBottom;
 
         var int i;
@@ -56,10 +63,11 @@ class Renderer {
         var int brickTop;
 
         // Draw a white rectangle over the current queue.
-        let queueRight = queueLeft + (Brick.maxShapeSize() * brickSize);
-        let queueBottom = gridTop + (state.getGridHeight() * brickSize);
+        let queueRight = queueLeft + (Brick.maxShapeSize() * cellSize);
+        let grid = state.getGrid();
+        let queueBottom = gridTop + (grid.getHeight() * cellSize);
         do Screen.setColor(false);
-        do Screen.drawRectangle(queueLeft, gridTop + brickSize, queueRight, queueBottom);
+        do Screen.drawRectangle(queueLeft, gridTop + cellSize, queueRight, queueBottom);
 
         // Render each brick in the queue.
         let i = 0;
@@ -68,15 +76,15 @@ class Renderer {
         while (i < qSize) {
             let brickType = queue.getBrickTypeAtIndex(i);
             let brickTypeSize = brickType.shapeSize();
-            let brickLeft = queueLeft + ((brickSize * (Brick.maxShapeSize() - brickTypeSize)) / 2);
-            let brickTop = brickSize + gridTop + (Brick.maxShapeSize() * i * brickSize);
-            do Renderer.renderBrickType(brickType, brickLeft, brickTop);
+            let brickLeft = queueLeft + ((cellSize * (Brick.maxShapeSize() - brickTypeSize)) / 2);
+            let brickTop = cellSize + gridTop + (Brick.maxShapeSize() * i * cellSize);
+            do Renderer.renderBrick(brickType, brickLeft, brickTop);
             let i = i + 1;
         }
         return;
     }
 
-    function void renderBrickType(Brick brick, int x, int y) {
+    function void renderBrick(Brick brick, int x, int y) {
         var int size;
         var int sizeSquared;
         var Array shape;
@@ -91,21 +99,25 @@ class Renderer {
         let i = 0;
         while (i < sizeSquared) {
             if (shape[i]) {
-                let curx = x + (MathExt.mod(i, size) * brickSize);
-                let cury = y + ((i / size) * brickSize);
-                do Renderer.renderBrick(curx, cury);
+                let curx = x + (MathExt.mod(i, size) * cellSize);
+                let cury = y + ((i / size) * cellSize);
+                do Renderer.renderBrickCell(curx, cury);
             }
             let i = i + 1;
         }
+        do shape.dispose();
         return;
     }
 
-    function void renderBrick(int x, int y) {
+    function void renderBrickCell(int x, int y) {
+        if (y < gridTop) {
+            return;
+        }
         do Screen.setColor(true);
-        do Screen.drawRectangle(x, y, x + brickSize, y + brickSize);
+        do Screen.drawRectangle(x, y, x + cellSize, y + cellSize);
         do Screen.setColor(false);
-        do Screen.drawLine(x, y, x + brickSize, y);
-        do Screen.drawLine(x, y, x, y + brickSize);
+        do Screen.drawLine(x, y, x + cellSize, y);
+        do Screen.drawLine(x, y, x, y + cellSize);
         return;
     }
 
@@ -115,6 +127,19 @@ class Renderer {
         do Output.moveCursor(scoreCursorRow, scoreCursorCol);
         do Output.printString("Score: ");
         do Output.printInt(state.getScore());
+        return;
+    }
+
+    function void renderFallingBrick(FallingBrick fallingBrick) {
+        var int x;
+        var int y;
+
+        if (~fallingBrick.isSpawned()) {
+            return;
+        }
+        let x = gridLeft + (fallingBrick.getX() * cellSize);
+        let y = fallingBrick.getY() * cellSize - gridTop;
+        do Renderer.renderBrick(fallingBrick.getBrick(), x, y);
         return;
     }
 }

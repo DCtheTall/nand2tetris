@@ -45,7 +45,7 @@ class Brick {
     }
 
     method bool indexInShape(int i) {
-        if (type = 0) {
+        if (type = 0) {  // I-block
             return MathExt.inRange(i, 4, 8);
         }
         if (type = 1) {  // L-block

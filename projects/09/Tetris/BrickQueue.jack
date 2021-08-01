@@ -28,4 +28,19 @@ class BrickQueue {
     method int getSize() { return size; }
 
     method Brick getBrickTypeAtIndex(int i) { return queue[i]; }
+
+    method Brick dequeue() {
+        var Brick result;
+        var int i;
+
+        let result = queue[0];
+        let i = 1;
+        while (i < size) {
+            let queue[i-1] = queue[i];
+            let i = i + 1;
+        }
+        // TODO use RNG
+        let queue[size-1] = Brick.new(1);
+        return result;
+    }
 }

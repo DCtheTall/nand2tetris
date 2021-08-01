@@ -5,6 +5,11 @@ class MathExt {
         return (a = b) | (a > b);
     }
 
+    /** a <= b */
+    function bool leq(int a, int b) {
+        return (a = b) | (a < b);
+    }
+
     /** x in [a, b) */
     function bool inRange(int x, int lo, int hi) {
         return MathExt.geq(x, lo) & (x < hi);

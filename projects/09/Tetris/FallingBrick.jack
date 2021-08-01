@@ -1,0 +1,79 @@
+class FallingBrick {
+    field Brick brick;
+    field bool spawned;
+    field int x;
+    field int y;
+
+    constructor FallingBrick new(Brick aBrick) {
+        let brick = aBrick;
+        let spawned = false;
+        return this;
+    }
+
+    method void dispose() {
+        do brick.dispose();
+        do Memory.deAlloc(this);
+        return;
+    }
+
+    method bool isSpawned() { return spawned; }
+
+    method void spawn(Grid grid) {
+        var int gridWidth;
+        var int brickSize;
+        let spawned = true;
+        let gridWidth = grid.getWidth();
+        let brickSize = brick.shapeSize();
+        let x = (gridWidth - brickSize) / 2;
+        let y = -brickSize;
+        return;
+    }
+
+    /** Returns true if the falling brick can no longer fall */
+    method bool tickGravity(Grid grid) {
+        if (~canFall(grid)) {
+            return true;
+        }
+        let y = y + 1;
+        return false;
+    }
+
+    method int getX() { return x; }
+
+    method int getY() { return y; }
+
+    method int getBrick() { return brick; }
+
+    method bool canFall(Grid grid) {
+        return (~isTouchingFloor(grid)) & (~isCollidingWithGrid(grid));
+    }
+
+    method bool isTouchingFloor(Grid grid) {
+        var int size;
+        var int sizeSquared;
+        var int height;
+        var Array shape;
+        var int i;
+
+        let size = brick.shapeSize();
+        let sizeSquared = size * size;
+        let height = grid.getHeight();
+        let shape = brick.rotatedShape();
+        
+        let i = sizeSquared - 1;
+        while (i > -1) {
+            if (shape[i] & (((i / size) + y) = height)) {
+                do shape.dispose();
+                return true;
+            }
+            let i = i - 1;
+        }
+        do shape.dispose();
+        return false;
+    }
+
+    // TODO
+    method bool isCollidingWithGrid(Grid grid) {
+        return false;
+    }
+}
