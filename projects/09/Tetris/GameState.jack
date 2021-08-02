@@ -41,6 +41,7 @@ class GameState {
 
     method bool isGameOver() { return gameOver; }
 
+    /** Update the game state from a clock tick */
     method void onClockTick() {
         var int rowsComplete;
         if (animatingRow) {
@@ -73,6 +74,7 @@ class GameState {
         return;
     }
 
+    /** Update the state from a user action */
     method void onAction(KeyInput input) {
         if (animatingRow | (~fallingBrick.isSpawned())) {
             return;

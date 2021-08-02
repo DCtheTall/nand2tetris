@@ -32,6 +32,7 @@ class Brick {
 
     method int getOrientation() { return orientation; }
 
+    /** Return the size of one size of the brick type's shape grid */
     method int shapeSize() {
         if (isIBlock()) {
             return 4;
@@ -42,6 +43,7 @@ class Brick {
         return 3;
     }
 
+    /** Returns a (shapeSize * shapeSize) length array which is true that defines the brick shape */
     method Array shape() {
         var int size;
         var int sizeSquared;
@@ -60,6 +62,7 @@ class Brick {
         return result;
     }
 
+    /** Returns if an index in a shape array is part of the brick's actual shape */
     method bool indexInShape(int i) {
         if (isIBlock()) {
             return MathExt.inRange(i, 4, 8);
@@ -83,18 +86,22 @@ class Brick {
         return (i = 1) | MathExt.inRange(i, 3, 6);
     }
 
+    /** Rotate the brick */
     method void rotate() {
         let orientation = MathExt.mod(orientation + 1, 4);
         return;
     }
 
+    /** Undoes a rotation in case there are no valid places for the brick to be rendered */
     method void undoRotate() {
         let orientation = MathExt.mod(orientation - 1, 4);
         return;
     }
 
+    /** Returns the shape array rotated to the brick's current orientation */
     method Array rotatedShape() {
         var Array curShape;
+        var Array tmp;
         var int i;
         var int size;
 
@@ -106,25 +113,30 @@ class Brick {
         let size = shapeSize();
         let i = 0;
         while (i < orientation) {
-            let curShape = Brick.rotateShape(curShape, size);
+            let tmp = Brick.rotateShape(curShape, size);
+            do curShape.dispose();
+            let curShape = tmp;
             let i = i + 1;
         }
 
         return curShape;
     }
 
+    /** Initialize the values used for static functions */
     function void init() {
         let nTypes = 7;
         return;
     }
 
-    // TODO fix
+    /** Return a pseudorandom brick type */
     function Brick randomBrickType() {
         return Brick.new(Random.randRange(nTypes));
     }
 
+    /** Returns the maximum side length of a brick shape */
     function int maxShapeSize() { return 4; }
 
+    /** Rotates a brick shape array to the next orientation */
     function Array rotateShape(Array prevShape, int size) {
         var int sizeSquared;
         var Array result;

@@ -1,3 +1,4 @@
+/** Grid contains operations on the grid of static bricks that have finished falling */
 class Grid {
     field int width;
     field int height;
@@ -31,6 +32,7 @@ class Grid {
 
     method int getHeight() { return height; }
 
+    /** Returns if the cell at a given index contains a brick */
     method bool cellAtIndex(int i) {
         if (i < 0 | MathExt.geq(i, width * height)) {
             return false;
@@ -38,6 +40,7 @@ class Grid {
         return grid[i];
     }
 
+    /** Writes the falling brick to the grid */
     method void writeFallingBrickToGrid(FallingBrick fallingBrick) {
         var Brick brick;
         var Array shape;
@@ -68,6 +71,7 @@ class Grid {
         return;
     }
 
+    /** Returns true if the given row is full */
     method bool isRowComplete(int row) {
         var int i;
         let i = 0;
@@ -81,6 +85,7 @@ class Grid {
         return true;
     }
 
+    /** Returns the number of full rows */
     method int rowsComplete() {
         var int i;
         var int result;
@@ -95,6 +100,7 @@ class Grid {
         return result;
     }
 
+    /** Starts the animation when a row is filled */
     method void startAnimation() {
         var int i;
         let i = 0;
@@ -105,6 +111,7 @@ class Grid {
         return;
     }
 
+    /** Ticks the animation when a row is filled */
     method void tickAnimation(bool value) {
         var int i;
         var int j;
@@ -122,29 +129,40 @@ class Grid {
         return;
     }
 
+    /** Clears all complete rows from the grid */
     method void clearCompleteRows() {
-        var Array result;
+        var Array tmp;
         var int i;
         var int dy;
         var int j;
 
-        let result = Array.new(width * height);
+        let tmp = grid;
+        let grid = Array.new(width * height);
         let i = height - 1;
         let dy = 0;
         while (MathExt.geq(i, 0)) {
-            if (isRowComplete(i)) {
+            if (rowsAnimating[i]) {
                 let dy = dy + 1;
+            } else {
+                let j = 0;
+                while (j < width) {
+                    let grid[(i + dy) * width + j] = tmp[(i * width) + j];
+                    let j = j + 1;
+                }
             }
+            let i = i - 1;
+        }
+        let i = dy;
+        while (i > 0) {
             let j = 0;
             while (j < width) {
-                let result[(i * width) + j] = MathExt.geq(i - dy, 0) & grid[((i - dy) * width) + j];
+                let grid[(i - 1) * width + j] = false;
                 let j = j + 1;
             }
             let i = i - 1;
         }
 
-        do grid.dispose();
-        let grid = result;
+        do tmp.dispose();
         return;
     }
 }

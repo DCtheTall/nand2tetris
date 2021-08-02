@@ -16,6 +16,7 @@ class Clock {
         return;
     }
 
+    /** Tick the clock, returns true if the clock has elapsed a full period */
     method bool tick() {
         if (stopped) {
             return false;
@@ -28,6 +29,7 @@ class Clock {
         return false;
     }
 
+    /** Stops the clock, used when game ends */
     method void stop() {
         let stopped = true;
         return;

@@ -5,7 +5,7 @@ class GameLoop {
     field bool exit;
 
     constructor GameLoop new() {
-        let clock = Clock.new(2000);
+        let clock = Clock.new(2500);
         let state = GameState.new();
         return this;
     }
@@ -17,6 +17,7 @@ class GameLoop {
         return;
     }
 
+    /** Run the game loop which updates the GameState and calls Renderer functions */
     method void run() {
         var KeyInput input;
         var bool previousNoAction;

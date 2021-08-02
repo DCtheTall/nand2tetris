@@ -1,3 +1,4 @@
+/** Representation of user keyboard input */
 class KeyInput {
     field int key;
 
@@ -19,10 +20,12 @@ class KeyInput {
 
     method boolean isRightArrow() { return key = 132; }
 
+    /** Returns if the user did not input a valid action */
     method boolean isNoAction() {
         return ~(isUpArrow() | isDownArrow() | isLeftArrow() | isRightArrow());
     }
 
+    /** Reads the keyboard input and creates a resulting KeyInput */
     function KeyInput readInput() {
         return KeyInput.new(Keyboard.keyPressed());
     }

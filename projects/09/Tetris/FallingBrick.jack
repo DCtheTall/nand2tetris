@@ -24,6 +24,7 @@ class FallingBrick {
 
     method bool isSpawned() { return spawned; }
 
+    /** Spawn a new falling brick */
     method void spawn(Grid grid) {
         var int gridWidth;
         var int brickSize;
@@ -44,10 +45,12 @@ class FallingBrick {
         return false;
     }
 
+    /** Returns true if the brick can fall to the next spot */
     method bool canFall(Grid grid) {
         return (~isTouchingFloor(grid)) & (~isOnTopOfBricks(grid));
     }
 
+    /** Returns true if the falling brick is touching the floor */
     method bool isTouchingFloor(Grid grid) {
         var int size;
         var int sizeSquared;
@@ -72,10 +75,12 @@ class FallingBrick {
         return false;
     }
 
+    /** Returns true if the falling brick is on top of bricks in the grid */
     method bool isOnTopOfBricks(Grid grid) {
         return collision(grid, x, y + 1);
     }
 
+    /** Returns true if the falling brick is colliding with any brick in the grid */
     method bool collision(Grid grid, int x0, int y0) {
         var Array shape;
         var int size;
@@ -107,10 +112,12 @@ class FallingBrick {
         return false;
     }
 
+    /** Returns true if the falling brick lands above the screen */
     method bool gameOver(Grid grid) {
         return isOnTopOfBricks(grid) & (y < 0);
     }
 
+    /** Move the falling brick to the left */
     method void moveLeft(Grid grid) {
         if (~canMove(grid, true)) {
             return;
@@ -119,6 +126,7 @@ class FallingBrick {
         return;
     }
     
+    /** Move the falling brick to the right */
     method void moveRight(Grid grid) {
         if (~canMove(grid, false)) {
             return;
@@ -127,6 +135,7 @@ class FallingBrick {
         return;
     }
 
+    /** Returns true if the falling brick can move left or right */
     method bool canMove(Grid grid, bool left) {
         var int dx;
         if (left) {
@@ -137,6 +146,7 @@ class FallingBrick {
         return ~(isTouchingWall(left, grid.getWidth()) | collision(grid, x + dx, y));
     }
 
+    /** Returns true if the falling brick is touching the wall */
     method bool isTouchingWall(bool left, int gridWidth) {
         var Array shape;
         var int size;
@@ -166,6 +176,7 @@ class FallingBrick {
         return false;
     }
 
+    /** Causes the falling brick to fall as long as it doesn't collide */
     method void fastFall(Grid grid) {
         while (canFall(grid)) {
             let y = y + 1;
@@ -173,6 +184,7 @@ class FallingBrick {
         return;
     }
 
+    /** Rotate the current falling brick, does wallkicks if the brick is colliding */
     method void rotate(Grid grid) {
         var bool isIBlock;
         var int orientation;

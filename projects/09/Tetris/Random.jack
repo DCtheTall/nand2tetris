@@ -2,6 +2,7 @@
 class Random {
     static int seed;
     
+    /** Set the random seed */
     function void setSeed(int aSeed) {
         let seed = aSeed;
         return;

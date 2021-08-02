@@ -2,12 +2,11 @@
 class Main {
     function void main() {
         var GameLoop loop;
-        let loop = GameLoop.new();
-        
-        // TODO prompt for seed
-        do Random.setSeed(12345);
-        do Renderer.init();
+
         do Brick.init();
+        do Random.setSeed(123);
+        let loop = GameLoop.new();
+        do Renderer.init();
 
         do loop.run();
         do loop.dispose();

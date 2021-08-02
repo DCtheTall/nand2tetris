@@ -11,8 +11,7 @@ class BrickQueue {
 
         let i = 0;
         while (i < size) {
-            // TODO use RNG
-            let queue[i] = Brick.new(i);
+            let queue[i] = Brick.randomBrickType();
             let i = i + 1;
         }
 
@@ -29,6 +28,7 @@ class BrickQueue {
 
     method Brick getBrickTypeAtIndex(int i) { return queue[i]; }
 
+    /** Dequeue the next brick and insert a random brick type in the end of the queue */
     method Brick dequeue() {
         var Brick result;
         var int i;
@@ -39,8 +39,7 @@ class BrickQueue {
             let queue[i-1] = queue[i];
             let i = i + 1;
         }
-        // TODO use RNG
-        let queue[size-1] = Brick.new(1);
+        let queue[size-1] = Brick.randomBrickType();
         return result;
     }
 }

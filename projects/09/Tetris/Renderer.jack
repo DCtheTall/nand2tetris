@@ -17,6 +17,7 @@ class Renderer {
         return;
     }
 
+    /** Render the game start */
     function void renderGameStart(GameState state) {
         var Grid grid;
         var int gridRight;
@@ -37,6 +38,7 @@ class Renderer {
         return;
     }
 
+    /** Render the GameState to the screen */
     function void renderState(GameState state) {
         var Grid grid;
         var int queueLeft;
@@ -50,6 +52,7 @@ class Renderer {
         return;
     }
 
+    /** Render the grid of static blocks */
     function void renderGrid(Grid grid) {
         var int width;
         var int height;
@@ -80,6 +83,7 @@ class Renderer {
         return;
     }
 
+    /** Render the queue of bricks to come */
     function void renderBrickQueue(GameState state, int queueLeft) {
         var int queueRight;
         var Grid grid;
@@ -115,6 +119,7 @@ class Renderer {
         return;
     }
 
+    /** Render a brick shape */
     function void renderBrick(Brick brick, int x, int y) {
         var int size;
         var int sizeSquared;
@@ -140,6 +145,7 @@ class Renderer {
         return;
     }
 
+    /** Render a single brick cell */
     function void renderBrickCell(int x, int y) {
         if (y < gridTop) {
             return;
@@ -152,6 +158,7 @@ class Renderer {
         return;
     }
 
+    /** Render the score */
     function void renderScore(GameState state) {
         do Output.moveCursor(scoreCursorRow, scoreCursorCol);
         do Output.printString("              ");
@@ -161,6 +168,7 @@ class Renderer {
         return;
     }
 
+    /** Render the game over text */
     function void renderGameOver(GameState state) {
         if (~state.isGameOver()) {
             return;
@@ -170,6 +178,7 @@ class Renderer {
         return;
     }
 
+    /** Render the currently falling brick */
     function void renderFallingBrick(FallingBrick fallingBrick) {
         var int x;
         var int y;

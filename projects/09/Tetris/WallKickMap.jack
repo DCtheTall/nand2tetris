@@ -1,6 +1,7 @@
 class WallKickMap {
     function int getNPairsPerOrientation() { return 4; }
 
+    /** Returns the x and y shifts needed for each wall kick */
     function Array getWallkick(bool isIBlock, int orientation, int index) {
         if (index = 0) {
             return WallKickMap.makePair(0, 0);
@@ -113,6 +114,7 @@ class WallKickMap {
         return WallKickMap.makePair(-1, 2);
     }
 
+    /** Make an array with two integers */
     function Array makePair(int a, int b) {
         var Array result;
         let result = Array.new(2);
