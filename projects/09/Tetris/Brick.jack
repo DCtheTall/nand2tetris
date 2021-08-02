@@ -16,11 +16,27 @@ class Brick {
         return;
     }
 
+    method bool isIBlock() { return type = 0; }
+
+    method bool isLBlock() { return type = 1; }
+
+    method bool isJBlock() { return type = 2; }
+
+    method bool isOBlock() { return type = 3; }
+
+    method bool isSBlock() { return type = 4; }
+
+    method bool isZBlock() { return type = 5; }
+
+    // T-block type = 6
+
+    method int getOrientation() { return orientation; }
+
     method int shapeSize() {
-        if (type = 0) {  // I-block
+        if (isIBlock()) {
             return 4;
         }
-        if (type = 3) { // O-block
+        if (isOBlock()) {
             return 2;
         }
         return 3;
@@ -45,22 +61,22 @@ class Brick {
     }
 
     method bool indexInShape(int i) {
-        if (type = 0) {  // I-block
+        if (isIBlock()) {
             return MathExt.inRange(i, 4, 8);
         }
-        if (type = 1) {  // L-block
+        if (isLBlock()) {
             return (i = 0) | MathExt.inRange(i, 3, 6);
         }
-        if (type = 2) {  // J-block
+        if (isJBlock()) {
             return (i = 2) | MathExt.inRange(i, 3, 6);
         }
-        if (type = 3) {  // O-block
+        if (isOBlock()) {
             return true;
         }
-        if (type = 4) {  // S-block
+        if (isSBlock()) {
             return MathExt.inRange(i, 1, 3) | MathExt.inRange(i, 3, 5);
         }
-        if (type = 5) {  // Z-block
+        if (isZBlock()) {
             return MathExt.inRange(i, 0, 2) | MathExt.inRange(i, 4, 6);
         }
         // T-block
@@ -68,10 +84,12 @@ class Brick {
     }
 
     method void rotate() {
-        let orientation = orientation + 1;
-        if (orientation = 4) {
-            let orientation = 0;
-        }
+        let orientation = MathExt.mod(orientation + 1, 4);
+        return;
+    }
+
+    method void undoRotate() {
+        let orientation = MathExt.mod(orientation - 1, 4);
         return;
     }
 
@@ -81,6 +99,10 @@ class Brick {
         var int size;
 
         let curShape = shape();
+        if (isOBlock()) {
+            return curShape;
+        }
+
         let size = shapeSize();
         let i = 0;
         while (i < orientation) {

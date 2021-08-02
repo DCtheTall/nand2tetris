@@ -16,6 +16,12 @@ class FallingBrick {
         return;
     }
 
+    method int getX() { return x; }
+
+    method int getY() { return y; }
+
+    method int getBrick() { return brick; }
+
     method bool isSpawned() { return spawned; }
 
     method void spawn(Grid grid) {
@@ -37,12 +43,6 @@ class FallingBrick {
         let y = y + 1;
         return false;
     }
-
-    method int getX() { return x; }
-
-    method int getY() { return y; }
-
-    method int getBrick() { return brick; }
 
     method bool canFall(Grid grid) {
         return (~isTouchingFloor(grid)) & (~isOnTopOfBricks(grid));
@@ -72,9 +72,11 @@ class FallingBrick {
         return false;
     }
 
-    // TODO refactor to make a general collision algorithm usin x0, y0
-    // For this function, x0 = x, y0 = y + 1
     method bool isOnTopOfBricks(Grid grid) {
+        return collision(grid, x, y + 1);
+    }
+
+    method bool collision(Grid grid, int x0, int y0) {
         var Array shape;
         var int size;
         var int sizeSquared;
@@ -91,8 +93,8 @@ class FallingBrick {
         let i = 0;
         while (i < sizeSquared) {
             if (shape[i]) {
-                let gy = y + 1 + (i / size);
-                let gx = x + MathExt.mod(i, size);
+                let gx = x0 + MathExt.mod(i, size);
+                let gy = y0 + (i / size);
                 if (grid.cellAtIndex((gy * width) + gx)) {
                     do shape.dispose();
                     return true;
@@ -107,5 +109,100 @@ class FallingBrick {
 
     method bool gameOver(Grid grid) {
         return isOnTopOfBricks(grid) & (y < 0);
+    }
+
+    method void moveLeft(Grid grid) {
+        if (~(spawned & canMove(grid, true))) {
+            return;
+        }
+        let x = x - 1;
+        return;
+    }
+    
+    method void moveRight(Grid grid) {
+        if (~(spawned & canMove(grid, false))) {
+            return;
+        }
+        let x = x + 1;
+        return;
+    }
+
+    method bool canMove(Grid grid, bool left) {
+        var int dx;
+        if (left) {
+            let dx = -1;
+        } else {
+            let dx = 1;
+        }
+        return ~(isTouchingWall(left, grid.getWidth()) | collision(grid, x + dx, y));
+    }
+
+    method bool isTouchingWall(bool left, int gridWidth) {
+        var Array shape;
+        var int size;
+        var int sizeSquared;
+        var int bound;
+        var int i;
+
+        let shape = brick.rotatedShape();
+        let size = brick.shapeSize();
+        let sizeSquared = size * size;
+        if (left) {
+            let bound = 0;
+        } else {
+            let bound = gridWidth - 1;
+        }
+
+        let i = 0;
+        while (i < sizeSquared) {
+            if (shape[i] & ((x + MathExt.mod(i, size)) = bound)) {
+                do shape.dispose();
+                return true;
+            }
+            let i = i + 1;
+        }
+
+        do shape.dispose();
+        return false;
+    }
+
+    method void fastFall(Grid grid) {
+        while (canFall(grid)) {
+            let y = y + 1;
+        }
+        return;
+    }
+
+    method void rotate(Grid grid) {
+        var bool isIBlock;
+        var int orientation;
+        var int i;
+        var Array wallkick;
+
+        if ((~spawned) | brick.isOBlock()) {
+            do wallkick.dispose();
+            return;
+        }
+
+        do brick.rotate();
+
+        let isIBlock = brick.isIBlock();
+        let orientation = brick.getOrientation();
+
+        let i = 0;
+        while (i < WallKickMap.getNPairsPerOrientation()) {
+            let wallkick = WallKickMap.getWallkick(isIBlock, orientation, i);
+            if (~collision(grid, x + wallkick[0], y + wallkick[1])) {
+                let x = x + wallkick[0];
+                let y = y + wallkick[1];
+                do wallkick.dispose();
+                return;
+            }
+            let i = i + 1;
+        }
+        
+        do brick.undoRotate();
+        do wallkick.dispose();
+        return;
     }
 }

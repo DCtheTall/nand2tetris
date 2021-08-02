@@ -1,0 +1,123 @@
+class WallKickMap {
+    function int getNPairsPerOrientation() { return 4; }
+
+    function Array getWallkick(bool isIBlock, int orientation, int index) {
+        if (index = 0) {
+            return WallKickMap.makePair(0, 0);
+        }
+        if (isIBlock) {
+            if (orientation = 0) {
+                if (index = 1) {
+                    return WallKickMap.makePair(-2, 0);
+                }
+                if (index = 2) {
+                    return WallKickMap.makePair(1, 0);
+                }
+                if (index = 3) {
+                    return WallKickMap.makePair(-2, -1);
+                }
+                // index = 4
+                return WallKickMap.makePair(1, 2);
+            }
+            if (orientation = 1) {
+                if (index = 1) {
+                    return WallKickMap.makePair(-1, 0);
+                }
+                if (index = 2) {
+                    return WallKickMap.makePair(2, 0);
+                }
+                if (index = 3) {
+                    return WallKickMap.makePair(-1, 2);
+                }
+                // index = 4
+                return WallKickMap.makePair(2, -1);
+            }
+            if (orientation = 2) {
+                if (index = 1) {
+                    return WallKickMap.makePair(2, 0);
+                }
+                if (index = 2) {
+                    return WallKickMap.makePair(-1, 0);
+                }
+                if (index = 3) {
+                    return WallKickMap.makePair(2, 1);
+                }
+                // index = 4
+                return WallKickMap.makePair(-1, -2);
+            }
+            // orientation = 3
+            if (index = 1) {
+                return WallKickMap.makePair(1, 0);
+            }
+            if (index = 2) {
+                return WallKickMap.makePair(-2, 0);
+            }
+            if (index = 3) {
+                return WallKickMap.makePair(1, -2);
+            }
+            // index = 4
+            return WallKickMap.makePair(-2, 1);
+        }
+        // Brick type is not I-block
+        if (orientation = 0) {
+            if (index = 1) {
+                return WallKickMap.makePair(-1, 0);
+            }
+            if (index = 2) {
+                return WallKickMap.makePair(-1, 1);
+            }
+            if (index = 3) {
+                return WallKickMap.makePair(0, -2);
+            }
+            // index = 4
+            return WallKickMap.makePair(-1, -2);
+        }
+        // Brick is any type but I-brick
+        if (orientation = 1) {
+            if (index = 1) {
+                return WallKickMap.makePair(1, 0);
+            }
+            if (index = 2) {
+                return WallKickMap.makePair(1, -1);
+            }
+            if (index = 3) {
+                return WallKickMap.makePair(0, 2);
+            }
+            // index = 4
+            return WallKickMap.makePair(1, 2);
+        }
+        if (orientation = 2) {
+            if (index = 1) {
+                return WallKickMap.makePair(1, 0);
+            }
+            if (index = 2) {
+                return WallKickMap.makePair(1, 1);
+            }
+            if (index = 3) {
+                return WallKickMap.makePair(0, -2);
+            }
+            // index = 4
+            return WallKickMap.makePair(1, -2);
+        }
+        // orientation = 3
+        if (index = 1) {
+            return WallKickMap.makePair(-1, 0);
+        }
+        if (index = 2) {
+            return WallKickMap.makePair(-1, -1);
+        }
+        if (index = 3) {
+            return WallKickMap.makePair(0, 2);
+        }
+        // index = 4
+        return WallKickMap.makePair(-1, 2);
+    }
+
+    function Array makePair(int a, int b) {
+        var Array result;
+        let result = Array.new(2);
+        let result[0] = a;
+        let result[1] = b;
+        return result;
+    }
+}

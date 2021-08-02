@@ -49,4 +49,22 @@ class GameState {
         }
         return;
     }
+
+    method void onAction(KeyInput input) {
+        if (input.isLeftArrow()) {
+            do fallingBrick.moveLeft(grid);
+            return;
+        }
+        if (input.isRightArrow()) {
+            do fallingBrick.moveRight(grid);
+            return;
+        }
+        if (input.isDownArrow()) {
+            do fallingBrick.fastFall(grid);
+            return;
+        }
+        // input.isUpArrow
+        do fallingBrick.rotate(grid);
+        return;
+    }
 }
