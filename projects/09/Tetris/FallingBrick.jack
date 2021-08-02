@@ -112,7 +112,7 @@ class FallingBrick {
     }
 
     method void moveLeft(Grid grid) {
-        if (~(spawned & canMove(grid, true))) {
+        if (~canMove(grid, true)) {
             return;
         }
         let x = x - 1;
@@ -120,7 +120,7 @@ class FallingBrick {
     }
     
     method void moveRight(Grid grid) {
-        if (~(spawned & canMove(grid, false))) {
+        if (~canMove(grid, false)) {
             return;
         }
         let x = x + 1;
@@ -179,7 +179,7 @@ class FallingBrick {
         var int i;
         var Array wallkick;
 
-        if ((~spawned) | brick.isOBlock()) {
+        if (brick.isOBlock()) {
             do wallkick.dispose();
             return;
         }

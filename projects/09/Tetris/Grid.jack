@@ -2,6 +2,7 @@ class Grid {
     field int width;
     field int height;
     field Array grid;
+    field Array rowsAnimating;
 
     constructor Grid new(int aWidth, int aHeight) {
         var int i;
@@ -15,11 +16,13 @@ class Grid {
             let grid[i] = false;
             let i = i + 1;
         }
+        let rowsAnimating = Array.new(height);
         return this;
     }
 
     method void dispose() {
         do grid.dispose();
+        do rowsAnimating.dispose();
         do Memory.deAlloc(this);
         return;
     }
@@ -62,6 +65,86 @@ class Grid {
             let i = i + 1;
         }
         do shape.dispose();
+        return;
+    }
+
+    method bool isRowComplete(int row) {
+        var int i;
+        let i = 0;
+        while (i < width) {
+            if (grid[(row * width) + i]) {
+                let i = i + 1;
+            } else {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    method int rowsComplete() {
+        var int i;
+        var int result;
+        let i = 0;
+        let result = 0;
+        while (i < height) {
+            if (isRowComplete(i)) {
+                let result = result + 1;
+            }
+            let i = i + 1;
+        }
+        return result;
+    }
+
+    method void startAnimation() {
+        var int i;
+        let i = 0;
+        while (i < height) {
+            let rowsAnimating[i] = isRowComplete(i);
+            let i = i + 1;
+        }
+        return;
+    }
+
+    method void tickAnimation(bool value) {
+        var int i;
+        var int j;
+        let i = 0;
+        while (i < height) {
+            if (rowsAnimating[i]) {
+                let j = 0;
+                while (j < width) {
+                    let grid[(i * width) + j] = value;
+                    let j = j + 1;
+                }
+            }
+            let i = i + 1;
+        }
+        return;
+    }
+
+    method void clearCompleteRows() {
+        var Array result;
+        var int i;
+        var int dy;
+        var int j;
+
+        let result = Array.new(width * height);
+        let i = height - 1;
+        let dy = 0;
+        while (MathExt.geq(i, 0)) {
+            if (isRowComplete(i)) {
+                let dy = dy + 1;
+            }
+            let j = 0;
+            while (j < width) {
+                let result[(i * width) + j] = MathExt.geq(i - dy, 0) & grid[((i - dy) * width) + j];
+                let j = j + 1;
+            }
+            let i = i - 1;
+        }
+
+        do grid.dispose();
+        let grid = result;
         return;
     }
 }

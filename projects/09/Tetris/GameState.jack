@@ -5,6 +5,10 @@ class GameState {
     field FallingBrick fallingBrick;
     field Grid grid;
     field bool gameOver;
+    field int pointsPerRow;
+    field bool animatingRow;
+    field int rowAnimationFrame;
+    field int rowAnimationLength;
 
     constructor GameState new() {
         let queue = BrickQueue.new(5);
@@ -12,6 +16,10 @@ class GameState {
         let fallingBrick = FallingBrick.new(queue.dequeue());
         let grid = Grid.new(10, 20);
         let gameOver = false;
+        let pointsPerRow = 100;
+        let animatingRow = false;
+        let rowAnimationFrame = 0;
+        let rowAnimationLength = 6;
         return this;
     }
 
@@ -34,23 +42,41 @@ class GameState {
     method bool isGameOver() { return gameOver; }
 
     method void onClockTick() {
-        // TODO check row animation
-        if (~fallingBrick.isSpawned()) {
-            do fallingBrick.spawn(grid);
-        }
-        if (fallingBrick.tickGravity(grid)) {
-            do grid.writeFallingBrickToGrid(fallingBrick);
-            if (fallingBrick.gameOver(grid)) {
-                let gameOver = true;
-                return;
+        var int rowsComplete;
+        if (animatingRow) {
+            let rowAnimationFrame = rowAnimationFrame + 1;
+            do grid.tickAnimation(MathExt.mod(rowAnimationFrame, 2) = 0);
+            if (rowAnimationFrame = rowAnimationLength) {
+                do grid.clearCompleteRows();
+                let animatingRow = false;
             }
-            let fallingBrick = FallingBrick.new(queue.dequeue());
-            // TODO check row completed, if so award points and start row animation
+        } else {
+            if (~fallingBrick.isSpawned()) {
+                do fallingBrick.spawn(grid);
+            }
+            if (fallingBrick.tickGravity(grid)) {
+                do grid.writeFallingBrickToGrid(fallingBrick);
+                if (fallingBrick.gameOver(grid)) {
+                    let gameOver = true;
+                    return;
+                }
+                let fallingBrick = FallingBrick.new(queue.dequeue());
+                let rowsComplete = grid.rowsComplete();
+                if (rowsComplete > 0) {
+                    let score = score + (pointsPerRow * rowsComplete);
+                    let animatingRow = true;
+                    let rowAnimationFrame = 0;
+                    do grid.startAnimation();
+                }
+            }
         }
         return;
     }
 
     method void onAction(KeyInput input) {
+        if (animatingRow | (~fallingBrick.isSpawned())) {
+            return;
+        }
         if (input.isLeftArrow()) {
             do fallingBrick.moveLeft(grid);
             return;
