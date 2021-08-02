@@ -192,7 +192,6 @@ class FallingBrick {
         var Array wallkick;
 
         if (brick.isOBlock()) {
-            do wallkick.dispose();
             return;
         }
 

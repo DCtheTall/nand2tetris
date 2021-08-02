@@ -85,17 +85,24 @@ class Renderer {
 
     /** Render the queue of bricks to come */
     function void renderBrickQueue(GameState state, int queueLeft) {
+        var BrickQueue queue;
+
         var int queueRight;
         var Grid grid;
         var int queueBottom;
 
         var int i;
-        var BrickQueue queue;
         var int qSize;
         var Brick brickType;
         var int brickTypeSize;
         var int brickLeft;
         var int brickTop;
+
+        let queue = state.getQueue();
+        if (~queue.getShouldRender()) {
+            return;
+        }
+        do queue.unsetShouldRender();
 
         // Draw a white rectangle over the current queue.
         let queueRight = queueLeft + (Brick.maxShapeSize() * cellSize);
@@ -106,7 +113,6 @@ class Renderer {
 
         // Render each brick in the queue.
         let i = 0;
-        let queue = state.getQueue();
         let qSize = queue.getSize();
         while (i < qSize) {
             let brickType = queue.getBrickTypeAtIndex(i);

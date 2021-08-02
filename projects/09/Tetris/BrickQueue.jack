@@ -3,6 +3,8 @@ class BrickQueue {
     field int size;
     field Array queue;
 
+    field bool shouldRender;
+
     constructor BrickQueue new(int aSize) {
         var int i;
 
@@ -14,6 +16,8 @@ class BrickQueue {
             let queue[i] = Brick.randomBrickType();
             let i = i + 1;
         }
+
+        let shouldRender = true;
 
         return this;
     }
@@ -28,6 +32,8 @@ class BrickQueue {
 
     method Brick getBrickTypeAtIndex(int i) { return queue[i]; }
 
+    method bool getShouldRender() { return shouldRender; }
+
     /** Dequeue the next brick and insert a random brick type in the end of the queue */
     method Brick dequeue() {
         var Brick result;
@@ -40,6 +46,12 @@ class BrickQueue {
             let i = i + 1;
         }
         let queue[size-1] = Brick.randomBrickType();
+        let shouldRender = true;
         return result;
+    }
+
+    method void unsetShouldRender() {
+        let shouldRender = false;
+        return;
     }
 }
