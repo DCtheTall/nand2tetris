@@ -10,8 +10,7 @@ class Grid {
         var int area;
         let width = aWidth;
         let height = aHeight;
-        let area = width * height;
-        let grid = Array.new(area);
+        let grid = Array.new(area());
         let i = 0;
         while (i < area) {
             let grid[i] = false;
@@ -32,12 +31,28 @@ class Grid {
 
     method int getHeight() { return height; }
 
+    method int area() { return width * height; }
+ 
     /** Returns if the cell at a given index contains a brick */
     method bool cellAtIndex(int i) {
-        if (i < 0 | MathExt.geq(i, width * height)) {
+        if (i < 0 | MathExt.geq(i, area())) {
             return false;
         }
         return grid[i];
+    }
+
+    method Array copyArray() {
+        var Array result;
+        var int i;
+
+        let result = Array.new(area());
+        let i = 0;
+        while (i < area()) {
+            let result[i] = grid[i];
+            let i = i + 1;
+        }
+
+        return result;
     }
 
     /** Writes the falling brick to the grid */
@@ -137,7 +152,7 @@ class Grid {
         var int j;
 
         let tmp = grid;
-        let grid = Array.new(width * height);
+        let grid = Array.new(area());
         let i = height - 1;
         let dy = 0;
         while (MathExt.geq(i, 0)) {
