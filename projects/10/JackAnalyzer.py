@@ -19,9 +19,8 @@ Parser:
 
 import os
 import sys
-import difflib
 
-from typing import List, NamedTuple
+from typing import List, NamedTuple, Tuple
 
 
 KEYWORDS = {'class', 'constructor', 'function', 'method', 'field', 'static',
@@ -63,15 +62,12 @@ class Token(object):
     self.value = value
 
   def __eq__(self, other) -> bool:
-    return ((self.__class__, other.value) ==
+    return ((self.__class__, self.value) ==
             (other.__class__, other.value))
-
-  def __str__(self):
-    return str(self.value)
 
   def TagName(self) -> str:
     """Virtual method that gets the Token's XML tag name."""
-    raise NotImplementedError('TagName not implemented for class Token')
+    raise NotImplementedError('TagName not implemented')
 
   def Value(self) -> str:
     """Value property formatted for XML"""
@@ -79,26 +75,21 @@ class Token(object):
       return self.value
     return self.value.replace('<', '&lt;').replace('>', '&gt;')
 
-
 class KeywordToken(Token):
   def TagName(self) -> str:
     return 'keyword'
-
 
 class SymbolToken(Token):
   def TagName(self) -> str:
     return 'symbol'
 
-
 class IntegerConstantToken(Token):
   def TagName(self) -> str:
     return 'integerConstant'
 
-
 class StringConstantToken(Token):
   def TagName(self) -> str:
     return 'stringConstant'
-
 
 class IdentifierToken(Token):
   def TagName(self) -> str:
@@ -248,13 +239,178 @@ def TokensToXMLString(tokens: List[Token]) -> str:
   return result + '\n'
 
 
+class SyntaxTreeNode:
+  """Base class for a node in the abstract syntax tree."""
+  def TagName(self):
+    raise NotImplementedError('TagName not implemented')
+
+
+class TerminalNode(SyntaxTreeNode):
+  def __init__(self, token: Token):
+    super(TerminalNode, self).__init__()
+
+# Terminal nodes inherit from token classes for TagName and Value
+class KeywordNode(KeywordToken, TerminalNode):
+  pass
+
+class SymbolNode(SymbolToken, TerminalNode):
+  pass
+
+class IntegerConstantNode(IntegerConstantToken, TerminalNode):
+  pass
+
+class StringConstantNode(StringConstantToken, TerminalNode):
+  pass
+
+class IdentifierNode(IdentifierToken, TerminalNode):
+  pass
+
+
+class NonTerminalNode(SyntaxTreeNode):
+  def __init__(self):
+    super(NonTerminalNode, self).__init__()
+    self.children = []
+
+  def AddChild(self, child: SyntaxTreeNode):
+    """Add a new child to the subtree."""
+    self.children.append(child)
+
+  def AddChildren(self, *children: List[SyntaxTreeNode]):
+    """Add a list of children to the subtree."""
+    self.children.extend(children)
+
+class ClassNode(NonTerminalNode):
+  def TagName(self):
+    return 'class'
+
+
+class ClassVarDecNode(NonTerminalNode):
+  def TagName(self):
+    return 'classVarDec'
+
+
+class SubroutineDecNode(NonTerminalNode):
+  def TagName(self):
+    return 'subroutineDec'
+
+
+def CompileClass(tokens: List[Token]) -> ClassNode:
+  """Compile a class statement from tokens."""
+  if (tokens[0] != KeywordToken('class')
+      or (not isinstance(tokens[1], IdentifierToken))
+      or tokens[2] != SymbolToken('{')
+      or tokens[-1] != SymbolToken('}')):
+    raise InvalidInputError('Invalid class')
+  node = ClassNode()
+  node.AddChildren(
+      KeywordNode('class'), IdentifierNode(tokens[1].Value()), SymbolNode('{'))
+
+  tokens = tokens[3:-1]
+  nodes, i = CompileClassVarDecs(tokens)
+  node.AddChildren(*nodes)
+
+  tokens = tokens[i:]
+  node.AddChildren(*CompileSubroutines(tokens))
+
+  node.AddChild(SymbolNode('}'))
+  return node
+
+
+def CompileClassVarDecs(
+    tokens: List[Token]) -> Tuple[List[ClassVarDecNode], int]:
+  """Compile the class variable declarations."""
+  i = 0
+  nodes = []
+  syntax_err = SyntaxError('Invalid class variable declaration')
+  while (tokens[i] == KeywordToken('static')
+         or tokens[i] == KeywordToken('field')):
+    node = ClassVarDecNode()
+    
+    if tokens[i] == KeywordToken('static'):
+      node.AddChild(KeywordNode('static'))
+    else:
+      node.AddChild(KeywordNode('field'))
+    i += 1
+
+    node.AddChild(ParseType(tokens[i]))
+    i += 1
+
+    if not isinstance(tokens[i], IdentifierToken):
+      raise syntax_err
+    node.AddChild(IdentifierNode(tokens[i].Value()))
+    i += 1
+
+    while tokens[i] == SymbolToken(','):
+      node.AddChild(SymbolNode(','))
+      i += 1
+      if not isinstance(tokens[i], IdentifierToken):
+        raise syntax_err
+      node.AddChild(IdentifierNode(tokens[i].Value()))
+      i += 1
+
+    if tokens[i] != SymbolToken(';'):
+      raise syntax_err
+    node.AddChild(SymbolNode(';'))
+    i += 1
+
+    nodes.append(node)
+  return nodes, i
+
+
+def ParseType(token: Token):
+  if isinstance(token, KeywordToken):
+    return KeywordNode(token.Value())
+  if isinstance(token, IdentifierToken):
+    return IdentifierNode(token.Value())
+  raise SyntaxError()
+
+
+def CompileSubroutines(tokens: List[Token]) -> List[SubroutineDecNode]:
+  """Compile subroutine declarations"""
+  nodes = []
+  i = 0
+  syntax_err = SyntaxError('Invalid subroutine declaration')
+  while i < len(tokens):
+    node = SubroutineDecNode()
+
+    if not (tokens[i] == KeywordToken('constructor')
+            or tokens[i] == KeywordToken('method')
+            or tokens[i] == KeywordToken('function')):
+      raise syntax_err
+    node.AddChild(KeywordNode(tokens[i].Value()))
+    i += 1
+
+    if tokens[i] == KeywordToken('void'):
+      node.AddChild(KeywordNode('void'))
+    else:
+      node.AddChild(ParseType(tokens[i]))
+    i += 1
+
+    if not isinstance(tokens[i], IdentifierToken):
+      raise syntax_err
+    node.AddChild(IdentifierNode(tokens[i].Value()))
+    i += 1
+
+    if tokens[i] != SymbolToken('('):
+      raise syntax_err
+    node.AddChild(SymbolNode('('))
+    i += 1
+
+    # TODO parse parameter list
+    print(tokens[i].Value())
+
+    nodes.append(node)
+  return nodes
+
+
 def main():
   """Main function"""
-  jack_files = ParseJackFilePathsFromArguments()
-  for file_path in jack_files:
+  for file_path in ParseJackFilePathsFromArguments():
+    print(file_path)
     tokens = Tokenize(file_path)
-    tokens_xml = TokensToXMLString(tokens)
-    print(tokens_xml)
+    _ = TokensToXMLString(tokens)
+    # TODO write token XML to file
+    syntax_tree = CompileClass(tokens)
 
 
 if __name__ == '__main__':
