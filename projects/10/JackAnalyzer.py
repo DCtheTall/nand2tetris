@@ -9,17 +9,19 @@ the Jack programs' abstract syntax tree.
 Parser:
 -   Reads the input directory for .jack files.
 -   For each file it tokenizes the source code.
+-   For each tokenized file, it outputs the corresponding <name>T.xml file.
 -   For each list of tokens it constructs the abstract syntax tree using
     the parsing rules from the class.
--   It outputs each abstract syntax tree to XML.
+-   It outputs each abstract syntax tree as a .xml file.
 
 """
 
 
 import os
 import sys
+import difflib
 
-from typing import List
+from typing import List, NamedTuple
 
 
 KEYWORDS = {'class', 'constructor', 'function', 'method', 'field', 'static',
@@ -67,25 +69,40 @@ class Token(object):
   def __str__(self):
     return str(self.value)
 
+  def TagName(self) -> str:
+    """Virtual method that gets the Token's XML tag name."""
+    raise NotImplementedError('TagName not implemented for class Token')
+
+  def Value(self) -> str:
+    """Value property formatted for XML"""
+    if not isinstance(self.value, str):
+      return self.value
+    return self.value.replace('<', '&lt;').replace('>', '&gt;')
+
 
 class KeywordToken(Token):
-  pass
+  def TagName(self) -> str:
+    return 'keyword'
 
 
 class SymbolToken(Token):
-  pass
+  def TagName(self) -> str:
+    return 'symbol'
 
 
 class IntegerConstantToken(Token):
-  pass
+  def TagName(self) -> str:
+    return 'integerConstant'
 
 
 class StringConstantToken(Token):
-  pass
+  def TagName(self) -> str:
+    return 'stringConstant'
 
 
 class IdentifierToken(Token):
-  pass
+  def TagName(self) -> str:
+    return 'identifier'
 
 
 def Tokenize(jack_file_path: str) -> List[Token]:
@@ -162,7 +179,7 @@ def TokenizeLine(line: str) -> List[Token]:
         j = line[i+1:].index('"')
       except ValueError:
         raise SyntaxError('Expected string to end before line ends')
-      tokens.append(StringConstantToken(line[i+1:j]))
+      tokens.append(StringConstantToken(line[i+1:i+1+j]))
       i += j + 2
       continue
     cur += line[i]
@@ -188,12 +205,56 @@ def TokenizeString(value: str) -> Token:
   return IdentifierToken(value)
 
 
+class XMLTag:
+  """Class encapsulates building an XML tag string"""
+  def __init__(self, tag_name: str):
+    self.tag_name = tag_name
+    self.text = ''
+    self.children = []
+
+  def __str__(self):
+    if not self.children:
+      return f'<{self.tag_name}> {self.text} </{self.tag_name}>'
+    lines = [f'<{self.tag_name}>']
+    for child in self.children:
+      child_lines = str(child.xml).split('\n')
+      indent = ' ' * child.indent
+      for i, line in enumerate(child_lines):
+        child_lines[i] = f'{indent}{line}'
+      lines.extend(child_lines)
+    lines.append(f'</{self.tag_name}>')
+    return '\n'.join(lines)
+
+  def Text(self, text: str):
+    self.text = text
+
+  def AddChild(self, child, indent=0):
+    self.children.append(XMLChild(xml=child, indent=indent))
+
+
+class XMLChild(NamedTuple):
+  xml: XMLTag
+  indent: int
+
+
+def TokensToXMLString(tokens: List[Token]) -> str:
+  """Generate an XML string from a list of tokens."""
+  xml = XMLTag('tokens')
+  for token in tokens:
+    child = XMLTag(token.TagName())
+    child.Text(token.Value())
+    xml.AddChild(child)
+  result = str(xml)
+  return result + '\n'
+
+
 def main():
   """Main function"""
   jack_files = ParseJackFilePathsFromArguments()
-  tokens = {}
   for file_path in jack_files:
-    tokens[file_path] = Tokenize(file_path)
+    tokens = Tokenize(file_path)
+    tokens_xml = TokensToXMLString(tokens)
+    print(tokens_xml)
 
 
 if __name__ == '__main__':

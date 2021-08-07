@@ -18,7 +18,7 @@ class InvalidInputError(Exception):
 
   def __init__(self):
     super(InvalidInputError, self).__init__(
-        'Must be called `python hack_assembler.py path/to/in.asm '
+        'Must be called `python HackAssembler.py path/to/in.asm '
         'path/to/out.hack`')
 
 

@@ -43,7 +43,7 @@ class InvalidInputError(Exception):
 
   def __init__(self, msg: str):
     super(InvalidInputError, self).__init__(
-        msg if msg else 'Must be called `python hack_assembler.py '
+        msg if msg else 'Must be called `python VMTranslator.py '
                         'path/to/in.vm or path/to/in/')
 
 
