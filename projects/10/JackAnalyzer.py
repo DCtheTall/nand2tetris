@@ -32,6 +32,12 @@ SYMBOLS = {'{', '}', '(', ')', '[', ']', '.', ',', ';', '+', '-', '*', '/',
 
 WHITESPACE = {' ', '\t', '\r'}
 
+BINARY_OPS = {'+', '-', '*', '/', '&', '|', '<', '>', '='}
+
+UNARY_OPS = {'-', '~'}
+
+KEYWORD_CONSTANTS = {'true', 'false', 'null', 'this'}
+
 
 class InvalidInputError(Exception):
   """Custom exception type for when users input invalid command line arguments."""
@@ -315,6 +321,22 @@ class LetStatementNode(NonTerminalNode):
   def TagName(self):
     return 'letStatement'
 
+class DoStatementNode(NonTerminalNode):
+  def TagName(self):
+    return 'doStatement'
+
+class ReturnStatementNode(NonTerminalNode):
+  def TagName(self):
+    return 'returnStatement'
+
+class WhileStatementNode(NonTerminalNode):
+  def TagName(self):
+    return 'whileStatement'
+
+class IfStatementNode(NonTerminalNode):
+  def TagName(self):
+    return 'ifStatement'
+
 class ExpressionNode(NonTerminalNode):
   def TagName(self):
     return 'expression'
@@ -359,17 +381,11 @@ def CompileClassVarDecs(
   """Compile the class variable declarations."""
   i = 0
   nodes = []
-  syntax_err = SyntaxError('Invalid class variable declaration')
   while (tokens[i] == KeywordToken('static')
          or tokens[i] == KeywordToken('field')):
     node = ClassVarDecNode()
-
-    if tokens[i] == KeywordToken('static'):
-      node.AddChild(KeywordNode('static'))
-    else:
-      node.AddChild(KeywordNode('field'))
+    node.AddChild(KeywordNode(tokens[i].Value()))
     i += 1
-
     node.AddChild(ParseType(tokens[i]))
     i += 1
 
@@ -496,7 +512,11 @@ def CompileSubroutineBody(
 
   child, i = CompileStatements(tokens, i)
   node.AddChild(child)
-  # TODO parse }
+  
+  if tokens[i] != SymbolToken('}'):
+    raise SyntaxError('Invalid subroutine body')
+  node.AddChild(SymbolNode('}'))
+  i += 1
 
   return node, i
 
@@ -529,17 +549,21 @@ def CompileStatements(
       child, i = CompileLetStatement(tokens, i)
       node.AddChild(child)
       continue
-    if tokens[i] == KeywordToken('if'):
-      # TODO if statement
-      continue
-    if tokens[i] == KeywordToken('while'):
-      # TODO while statement
-      continue
     if tokens[i] == KeywordToken('do'):
-      # TODO do statement
+      child, i = CompileDoStatement(tokens, i)
+      node.AddChild(child)
       continue
     if tokens[i] == KeywordToken('return'):
-      # TODO return statement
+      child, i = CompileReturnStatement(tokens, i)
+      node.AddChild(child)
+      continue
+    if tokens[i] == KeywordToken('while'):
+      child, i = CompileWhileStatement(tokens, i)
+      node.AddChild(child)
+      continue
+    if tokens[i] == KeywordToken('if'):
+      child, i = CompileIfStatement(tokens, i)
+      node.AddChild(child)
       continue
     raise SyntaxError('Invalid statement')
   return node, i
@@ -584,23 +608,130 @@ def CompileLetStatement(
   return node, i
 
 
-def CompileExpression(tokens: List[Token], i: int) -> Tuple[ExpressionNode, int]:
+def CompileDoStatement(
+    tokens: List[Token], i: int) -> Tuple[DoStatementNode, int]:
+  """Compile do statement tokens into a syntax subtree."""
+  node = DoStatementNode()
+  node.AddChild(KeywordNode('do'))
+  i += 1
+  children, i = CompileSubroutineCall(tokens, i)
+  node.AddChildren(*children)
+
+  if tokens[i] != SymbolToken(';'):
+    raise SyntaxError('Expected ;')
+  node.AddChild(SymbolNode(';'))
+  i += 1
+
+  return node, i
+
+
+def CompileReturnStatement(
+    tokens: List[Token], i: int) -> Tuple[ReturnStatementNode, int]:
+  """Compile return statement tokens into a syntax subtree."""
+  node = ReturnStatementNode()
+  node.AddChild(KeywordNode('return'))
+  i += 1
+
+  if tokens[i] != SymbolToken(';'):
+    child, i = CompileExpression(tokens, i)
+    node.AddChild(child)
+
+  if tokens[i] != SymbolToken(';'):
+    raise SyntaxError('Expected ;')
+  node.AddChild(SymbolNode(';'))
+  i += 1
+
+  return node, i
+
+
+def CompileWhileStatement(tokens: List[Token], i: int) -> Tuple[WhileStatementNode, int]:
+  """Compile while statement syntax subtree from tokens."""
+  node = WhileStatementNode()
+  node.AddChild(KeywordNode('while'))
+  i += 1
+
+  children, i = CompileParenExpression(tokens, i)
+  node.AddChildren(*children)
+
+  children, i = CompileBlock(tokens, i)
+  node.AddChildren(*children)
+
+  return node, i
+
+
+def CompileIfStatement(tokens: List[Token], i: int) -> Tuple[IfStatementNode, int]:
+  """Compile if statement subtree from list of tokens."""
+  node = IfStatementNode()
+  node.AddChild(KeywordNode('if'))
+  i += 1
+
+  children, i = CompileParenExpression(tokens, i)
+  node.AddChildren(*children)
+
+  children, i = CompileBlock(tokens, i)
+  node.AddChildren(*children)
+
+  if tokens[i] == KeywordToken('else'):
+    node.AddChild(KeywordNode('else'))
+    i += 1
+    children, i = CompileBlock(tokens, i)
+    node.AddChildren(*children)
+
+  return node, i
+
+
+def CompileParenExpression(
+    tokens: List[Token], i: int) -> Tuple[List[SyntaxTreeNode], int]:
+  """Compile an expression wrapped in parentheses."""
+  nodes = []
+  if tokens[i] != SymbolToken('('):
+    raise SyntaxError('Expected (')
+  nodes.append(SymbolNode('('))
+  i += 1
+
+  child, i = CompileExpression(tokens, i)
+  nodes.append(child)
+
+  if tokens[i] != SymbolToken(')'):
+    raise SyntaxError('Expected )')
+  nodes.append(SymbolNode(')'))
+  i += 1
+
+  return nodes, i
+
+
+def CompileBlock(
+    tokens: List[Token], i: int) -> Tuple[List[SyntaxTreeNode], int]:
+  """Compile statements wrapped in curly braces, i.e. a block."""
+  nodes = []
+  if tokens[i] != SymbolToken('{'):
+    raise SyntaxError('Expected {')
+  nodes.append(SymbolNode('{'))
+  i += 1
+
+  child, i = CompileStatements(tokens, i)
+  nodes.append(child)
+
+  if tokens[i] != SymbolToken('}'):
+    raise SyntaxError('Expected }')
+  nodes.append(SymbolNode('}'))
+  i += 1
+
+  return nodes, i
+
+
+def CompileExpression(
+    tokens: List[Token], i: int) -> Tuple[ExpressionNode, int]:
   """Compile an expression into a syntax tree."""
   node = ExpressionNode()
   child, i = CompileTerm(tokens, i)
   node.AddChild(child)
-  if IsOpToken(tokens[i]):
+  if any(tokens[i] == SymbolToken(symbol) for symbol in BINARY_OPS):
     node.AddChild(SymbolNode(tokens[i].Value()))
     i += 1
     child, i = CompileTerm(tokens, i)
     node.AddChild(child)
   return node, i
-
-
-def IsOpToken(token: Token) -> bool:
-  """Returns if a token is an op token in an expression."""
-  return any(token == SymbolToken(symbol)
-             for symbol in ['+', '-', '*', '/', '&', '|', '<', '>', '='])
 
 
 def CompileTerm(tokens: List[Token], i: int) -> Tuple[TermNode, int]:
@@ -613,7 +744,7 @@ def CompileTerm(tokens: List[Token], i: int) -> Tuple[TermNode, int]:
   elif isinstance(tokens[i], StringConstantToken):
     node.AddChild(StringConstantNode(tokens[i].Value()))
     i += 1
-  elif IsKeywordConstantToken(tokens[i]):
+  elif any(tokens[i] == KeywordToken(kw) for kw in KEYWORD_CONSTANTS):
     node.AddChild(KeywordConstantNode(tokens[i].Value()))
     i += 1
   elif isinstance(tokens[i], IdentifierToken):
@@ -633,15 +764,9 @@ def CompileTerm(tokens: List[Token], i: int) -> Tuple[TermNode, int]:
         node.AddChild(SymbolNode(']'))
         i += 1
   elif tokens[i] == SymbolToken('('):
-    node.AddChild(SymbolNode('('))
-    i += 1
-    child, i = CompileExpression(tokens, i)
-    node.AddChild(child)
-    if tokens[i] != SymbolToken(')'):
-      raise syntax_err
-    node.AddChild(SymbolNode(')'))
-    i += 1
-  elif IsUnaryOpToken(tokens[i]):
+    children, i = CompileParenExpression(tokens, i)
+    node.AddChildren(*children)
+  elif any(tokens[i] == SymbolToken(symbol) for symbol in UNARY_OPS):
     child = UnaryOpNode()
     child.AddChild(SymbolToken(tokens[i].Value()))
     node.AddChild(child)
@@ -651,17 +776,6 @@ def CompileTerm(tokens: List[Token], i: int) -> Tuple[TermNode, int]:
   else:
     raise syntax_err
   return node, i
-
-
-def IsKeywordConstantToken(token: Token) -> bool:
-  """Returns if the current token is a keyword constant."""
-  return any(token == KeywordToken(kw)
-             for kw in ['true', 'false', 'null', 'this'])
-
-
-def IsUnaryOpToken(token: Token) -> bool:
-  """Returns if the current token is a unary op token."""
-  return token == SymbolToken('~') or token == SymbolToken('-')
 
 
 def CompileSubroutineCall(
@@ -674,7 +788,7 @@ def CompileSubroutineCall(
   if tokens[i] == SymbolToken('.'):
     nodes.append(SymbolNode('.'))
     i += 1
-    if not isinstance(tokens[i], IdentifierNode):
+    if not isinstance(tokens[i], IdentifierToken):
       raise syntax_err
     nodes.append(IdentifierNode(tokens[i].Value()))
     i += 1
@@ -683,7 +797,7 @@ def CompileSubroutineCall(
   nodes.append(SymbolNode('('))
   i += 1
   expression_list = ExpressionListNode()
-  while True:
+  while tokens[i] != SymbolToken(')'):
     child, i = CompileExpression(tokens, i)
     expression_list.AddChild(child)
     if tokens[i] == SymbolToken(','):
