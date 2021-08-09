@@ -507,7 +507,7 @@ def ParseParameterList(tokens: List[Token]) -> ParameterListNode:
 
 def CompileSubroutineBody(
     tokens: List[Token], i: int) -> Tuple[SubroutineBodyNode, int]:
-  """"""
+  """Compile the variable declarations and statements in the body of a subroutine."""
   node = SubroutineBodyNode()
 
   if tokens[i] != SymbolToken('{'):
