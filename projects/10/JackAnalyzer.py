@@ -78,8 +78,14 @@ class Token(object):
   def Value(self) -> str:
     """Value property formatted for XML"""
     if not isinstance(self.value, str):
-      return self.value
-    return self.value.replace('<', '&lt;').replace('>', '&gt;')
+      return str(self.value)
+    if self.value == '<':
+      return '&lt;'
+    if self.value == '>':
+      return '&gt;'
+    if self.value == '&':
+      return '&amp;'
+    return self.value
 
 class KeywordToken(Token):
   def TagName(self) -> str:
@@ -211,7 +217,10 @@ class XMLTag:
 
   def __str__(self):
     if not self.children:
-      return f'<{self.tag_name}> {self.text} </{self.tag_name}>'
+      if self.text:
+        return f'<{self.tag_name}> {self.text} </{self.tag_name}>'
+      else:
+        return f'<{self.tag_name}>\n</{self.tag_name}>'
     lines = [f'<{self.tag_name}>']
     for child in self.children:
       child_lines = str(child.xml).split('\n')
@@ -232,6 +241,14 @@ class XMLTag:
 class XMLChild(NamedTuple):
   xml: XMLTag
   indent: int
+  
+
+def WriteTokensXML(jack_file_path: str, tokens: List[Token]) -> str:
+  """Write the tokenized .jack file into a .xml file."""
+  out_dir, jack_filename = os.path.split(jack_file_path)
+  out_path = os.path.join(out_dir, jack_filename.replace('.jack', 'T.xml'))
+  with open(out_path, 'w') as f:
+    f.write(TokensToXMLString(tokens))
 
 
 def TokensToXMLString(tokens: List[Token]) -> str:
@@ -252,16 +269,11 @@ class SyntaxTreeNode:
 
 
 class TerminalNode(SyntaxTreeNode):
-  def __init__(self, token: Token):
-    super(TerminalNode, self).__init__()
+  pass
 
 # Terminal nodes inherit from Token classes for TagName and Value
 class KeywordNode(KeywordToken, TerminalNode):
   pass
-
-class KeywordConstantNode(KeywordToken, TerminalNode):
-  def TagName(self):
-    return 'keywordConstant'
 
 class SymbolNode(SymbolToken, TerminalNode):
   pass
@@ -344,10 +356,6 @@ class ExpressionNode(NonTerminalNode):
 class TermNode(NonTerminalNode):
   def TagName(self):
     return 'term'
-
-class UnaryOpNode(NonTerminalNode):
-  def TagName(self):
-    return 'unaryOp'
 
 class ExpressionListNode(NonTerminalNode):
   def TagName(self):
@@ -573,7 +581,7 @@ def CompileLetStatement(
     tokens: List[Token], i: int) -> Tuple[LetStatementNode, int]:
   """Compile a let statement."""
   node = LetStatementNode()
-  node.AddChild(KeywordToken('let'))
+  node.AddChild(KeywordNode('let'))
   i += 1
 
   syntax_err = SyntaxError('Invalid let statement')
@@ -594,7 +602,7 @@ def CompileLetStatement(
 
   if tokens[i] != SymbolToken('='):
     raise syntax_err
-  node.AddChild(KeywordNode('='))
+  node.AddChild(SymbolNode('='))
   i += 1
 
   child, i = CompileExpression(tokens, i)
@@ -745,7 +753,7 @@ def CompileTerm(tokens: List[Token], i: int) -> Tuple[TermNode, int]:
     node.AddChild(StringConstantNode(tokens[i].Value()))
     i += 1
   elif any(tokens[i] == KeywordToken(kw) for kw in KEYWORD_CONSTANTS):
-    node.AddChild(KeywordConstantNode(tokens[i].Value()))
+    node.AddChild(KeywordNode(tokens[i].Value()))
     i += 1
   elif isinstance(tokens[i], IdentifierToken):
     if tokens[i+1] == SymbolToken('(') or tokens[i+1] == SymbolToken('.'):
@@ -767,9 +775,7 @@ def CompileTerm(tokens: List[Token], i: int) -> Tuple[TermNode, int]:
     children, i = CompileParenExpression(tokens, i)
     node.AddChildren(*children)
   elif any(tokens[i] == SymbolToken(symbol) for symbol in UNARY_OPS):
-    child = UnaryOpNode()
-    child.AddChild(SymbolToken(tokens[i].Value()))
-    node.AddChild(child)
+    node.AddChild(SymbolNode(tokens[i].Value()))
     i += 1
     child, i = CompileTerm(tokens, i)
     node.AddChild(child)
@@ -813,15 +819,34 @@ def CompileSubroutineCall(
   return nodes, i
 
 
+def SyntaxTreeToXML(node: SyntaxTreeNode) -> XMLTag:
+  """Convert a syntax tree into an XML tag tree."""
+  xml = XMLTag(node.TagName())
+  if isinstance(node, NonTerminalNode):
+    for child in node.children:
+      xml.AddChild(SyntaxTreeToXML(child), 2)
+  if isinstance(node, TerminalNode):
+    xml.Text(node.Value())
+  return xml
+
+
+def WriteSyntaxXML(jack_file_path: str, syntax_xml: XMLTag) -> str:
+  """Write the tokenized .jack file into a .xml file."""
+  out_dir, jack_filename = os.path.split(jack_file_path)
+  out_path = os.path.join(out_dir, jack_filename.replace('.jack', '.xml'))
+  syntax_out = str(syntax_xml) + '\n'
+  with open(out_path, 'w') as f:
+    f.write(syntax_out)
+
+
 def main():
   """Main function"""
   for file_path in ParseJackFilePathsFromArguments():
-    print(file_path)
+    print(f'Compiling {file_path}')
     tokens = Tokenize(file_path)
-    _ = TokensToXMLString(tokens)
-    # TODO write token XML to file
-    _ = CompileClass(tokens)
-    # TODO write syntax tree to XML file
+    WriteTokensXML(file_path, tokens)
+    syntax_tree = CompileClass(tokens)
+    WriteSyntaxXML(file_path, SyntaxTreeToXML(syntax_tree))
 
 
 if __name__ == '__main__':
