@@ -426,7 +426,7 @@ def BootCode() -> List[str]:
 
 
 def BootPointer(ptr_name: str, value: int) -> List[str]:
-  """Boot the pointer to  the provided value."""
+  """Boot the pointer to the provided value."""
   if value >= 0:
     result = ['@{}'.format(value), 'D=A']
   else:
