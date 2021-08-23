@@ -64,7 +64,7 @@ def VMSegmentFromKind(kind: VariableKind) -> VMSegment:
     return VMSegment.STATIC
   if kind == VariableKind.LOCAL:
     return VMSegment.LOCAL
-  else:  # kind == VMSegment.ARGUMENT:
+  else:  # kind == VariableKind.ARGUMENT:
     return VMSegment.ARGUMENT
 
 
@@ -75,7 +75,7 @@ class CodeWriter:
     self.output = []
     self.cls_symbol_table = SymbolTable()
     self.subroutine_symbol_table = None
-    self.class_name = None
+    self.cls_name = None
     self.subroutine_name = None
     self.subroutine_label_count = 0
 
@@ -116,19 +116,19 @@ class CodeWriter:
 
   def WriteLabel(self, label: str):
     """Writes a label VM command."""
-    self.Write(f'label {self.class_name}.{self.subroutine_name}.{label}')
+    self.Write(f'label {self.cls_name}.{self.subroutine_name}.{label}')
 
   def WriteGoto(self, label: str):
     """Writes a goto VM command."""
-    self.Write(f'goto {self.class_name}.{self.subroutine_name}.{label}')
+    self.Write(f'goto {self.cls_name}.{self.subroutine_name}.{label}')
 
   def WriteIfGoto(self, label: str):
     """Writes an if-goto VM command."""
-    self.Write(f'if-goto {self.class_name}.{self.subroutine_name}.{label}')
+    self.Write(f'if-goto {self.cls_name}.{self.subroutine_name}.{label}')
 
   def TranslateSyntaxTree(self, syntax_tree: ClassNode):
     """Translate a class syntax tree into VM code."""
-    self.class_name = syntax_tree.children[1].Value()
+    self.cls_name = syntax_tree.children[1].Value()
     for node in syntax_tree.children:
       if isinstance(node, ClassVarDecNode):
         self.AddClassSymbol(node)
@@ -162,7 +162,7 @@ class CodeWriter:
         self.AddLocalVariableSymbol(child)
     n_vars = self.subroutine_symbol_table.GetNumberOfLocals()
 
-    self.Write(f'function {self.class_name}.{self.subroutine_name} {n_vars}')
+    self.Write(f'function {self.cls_name}.{self.subroutine_name} {n_vars}')
 
     if node.children[0] == KeywordNode('constructor'):
       self.SetupConstructor()
@@ -447,7 +447,7 @@ class CodeWriter:
       assert isinstance(expr_list, ExpressionListNode)
       self.WritePush(VMSegment.POINTER, 0)
       n_args = self.TranslateExpressionList(expr_list)
-      self.WriteCall(self.class_name, subroutine_name, n_args + 1)
+      self.WriteCall(self.cls_name, subroutine_name, n_args + 1)
 
   def TranslateExpressionList(self, node: ExpressionListNode) -> int:
     """Translate an expression list for a subroutine call."""
