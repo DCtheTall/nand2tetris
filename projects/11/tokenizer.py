@@ -35,14 +35,6 @@ class Token(object):
 
   def Value(self) -> str:
     """Value property formatted for XML"""
-    if not isinstance(self.value, str):
-      return str(self.value)
-    if self.value == '<':
-      return '&lt;'
-    if self.value == '>':
-      return '&gt;'
-    if self.value == '&':
-      return '&amp;'
     return self.value
 
 class KeywordToken(Token):

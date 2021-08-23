@@ -359,8 +359,10 @@ def CompileDoStatement(
   node = DoStatementNode()
   node.AddChild(KeywordNode('do'))
   i += 1
-  children, i = CompileSubroutineCall(tokens, i)
-  node.AddChildren(*children)
+  child = TermNode()
+  grandchildren, i = CompileSubroutineCall(tokens, i)
+  child.AddChildren(*grandchildren)
+  node.AddChild(child)
 
   if tokens[i] != SymbolToken(';'):
     raise SyntaxError('Expected ;')
