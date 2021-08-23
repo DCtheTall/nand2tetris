@@ -120,7 +120,7 @@ class CodeWriter:
 
   def WriteGoto(self, label: str):
     """Writes a goto VM command."""
-    self.Write(f'if-goto {self.class_name}.{self.subroutine_name}.{label}')
+    self.Write(f'goto {self.class_name}.{self.subroutine_name}.{label}')
 
   def WriteIfGoto(self, label: str):
     """Writes an if-goto VM command."""
@@ -153,7 +153,16 @@ class CodeWriter:
     """Translate a subroutine declaration into VM code."""
     self.subroutine_label_count = 0
     self.subroutine_name = node.children[2].Value()
-    self.Write(f'function {self.class_name}.{self.subroutine_name}')
+    self.subroutine_symbol_table = SymbolTable()
+
+    subroutine_body = node.children[6]
+    assert isinstance(subroutine_body, SubroutineBodyNode)
+    for child in subroutine_body.children:
+      if isinstance(child, VarDecNode):
+        self.AddLocalVariableSymbol(child)
+    n_vars = self.subroutine_symbol_table.GetNumberOfLocals()
+
+    self.Write(f'function {self.class_name}.{self.subroutine_name} {n_vars}')
 
     if node.children[0] == KeywordNode('constructor'):
       self.SetupConstructor()
@@ -162,17 +171,11 @@ class CodeWriter:
       self.WritePush(VMSegment.ARGUMENT, 0)
       self.WritePop(VMSegment.POINTER, 0)
 
-    self.subroutine_symbol_table = SymbolTable()
     parameter_list = node.children[4]
     assert isinstance(parameter_list, ParameterListNode)
     self.AddArgumentSymbols(parameter_list)
-
-    subroutine_body = node.children[6]
-    assert isinstance(subroutine_body, SubroutineBodyNode)
+    
     for child in subroutine_body.children:
-      if isinstance(child, VarDecNode):
-        self.AddLocalVariableSymbol(child)
-        continue
       if isinstance(child, StatementsNode):
         self.TranslateStatements(child)
 
@@ -447,6 +450,13 @@ class CodeWriter:
       self.Write('eq')
 
 
+def WriteVMFile(jack_file_path: str, vm_file_content: str):
+  """Write the VM file content to the correct path."""
+  vm_file_path = jack_file_path.replace('.jack', '.vm')
+  with open(vm_file_path, 'w') as f:
+    f.write(vm_file_content)
+
+
 def main():
   """Main function called when you run the compiler."""
   jack_files = ParseJackFilePathsFromArguments()
@@ -455,8 +465,7 @@ def main():
     tokens = Tokenize(jack_file)
     syntax_tree = CompileClass(tokens)
     code_writer = CodeWriter(syntax_tree)
-    print(code_writer)
-    break
+    WriteVMFile(jack_file, str(code_writer))
 
 
 if __name__ == '__main__':

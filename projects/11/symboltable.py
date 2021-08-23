@@ -79,10 +79,18 @@ class SymbolTable:
       return None
     return self.symbols[name]
 
-  def GetNumberOfFields(self):
-    """Get the number of class fields in the symbol table."""
+  def GetNumberOfKind(self, kind: VariableKind):
+    """Get the number of variables with a given kind."""
     result = 0
     for symbol in self.symbols.values():
-      if symbol.kind == VariableKind.FIELD:
+      if symbol.kind == kind:
         result += 1
     return result
+
+  def GetNumberOfFields(self):
+    """Get the number of class fields in the symbol table."""
+    return self.GetNumberOfKind(VariableKind.FIELD)
+
+  def GetNumberOfLocals(self):
+    """Get the number of class fields in the symbol table."""
+    return self.GetNumberOfKind(VariableKind.LOCAL)

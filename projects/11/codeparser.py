@@ -473,7 +473,7 @@ def CompileExpression(
   node = ExpressionNode()
   child, i = CompileTerm(tokens, i)
   node.AddChild(child)
-  if any(tokens[i] == SymbolToken(symbol) for symbol in BINARY_OPS):
+  while any(tokens[i] == SymbolToken(symbol) for symbol in BINARY_OPS):
     node.AddChild(SymbolNode(tokens[i].Value()))
     i += 1
     child, i = CompileTerm(tokens, i)
