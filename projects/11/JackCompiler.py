@@ -167,13 +167,14 @@ class CodeWriter:
     if node.children[0] == KeywordNode('constructor'):
       self.SetupConstructor()
 
-    if node.children[0] == KeywordNode('method'):
+    is_method = node.children[0] == KeywordNode('method')
+    if is_method:
       self.WritePush(VMSegment.ARGUMENT, 0)
       self.WritePop(VMSegment.POINTER, 0)
 
     parameter_list = node.children[4]
     assert isinstance(parameter_list, ParameterListNode)
-    self.AddArgumentSymbols(parameter_list)
+    self.AddArgumentSymbols(parameter_list, is_method)
     
     for child in subroutine_body.children:
       if isinstance(child, StatementsNode):
@@ -186,8 +187,10 @@ class CodeWriter:
     self.WriteCall('Memory', 'alloc', 1)
     self.WritePop(VMSegment.POINTER, 0)
 
-  def AddArgumentSymbols(self, parameter_list: ParameterListNode):
+  def AddArgumentSymbols(self, parameter_list: ParameterListNode, is_method: False):
     """Add argument symbols to the subroutine symbol table."""
+    if is_method:
+      self.subroutine_symbol_table.cur_indices[VariableKind.ARGUMENT] = 1
     for i, child in enumerate(parameter_list.children):
       if i % 3 == 0:
         var_type = VariableTypeFromNode(child)
@@ -228,14 +231,30 @@ class CodeWriter:
     """Translate a let statement into VM instructions."""
     var_name = node.children[1].Value()
     var = self.GetSymbol(var_name)
-    i = 3
     if node.children[2] == SymbolNode('['):
-      # TODO handle arrays
-      # TODO update i
-      pass
-    else:
-      assert node.children[2] == SymbolNode('=')
-    expr = node.children[i]
+      self.WritePush(VMSegmentFromKind(var.kind), var.index)
+
+      expr1 = node.children[3]
+      assert isinstance(expr1, ExpressionNode)
+      self.TranslateExpression(expr1)
+      expr2 = node.children[6]
+      assert isinstance(expr2, ExpressionNode)
+      self.TranslateExpression(expr2)
+
+      # Write sum of array address and result of expression 2 to temp 0
+      self.WritePop(VMSegment.TEMP, 0)
+      self.WritePush(VMSegmentFromKind(var.kind), var.index)
+      self.Write('add')
+      # Set `that` pointer to result of expression 1.
+      self.WritePop(VMSegment.POINTER, 1)
+
+      # Write the result expression 2 into the array.
+      self.WritePush(VMSegment.TEMP, 0)
+      self.WritePop(VMSegment.THAT, 0)
+      return
+      
+    assert node.children[2] == SymbolNode('=')
+    expr = node.children[3]
     assert isinstance(expr, ExpressionNode)
     self.TranslateExpression(expr)
     self.WritePop(VMSegmentFromKind(var.kind), var.index)
@@ -249,9 +268,9 @@ class CodeWriter:
 
   def TranslateReturnStatement(self, node: ReturnStatementNode):
     """Translate a return statement into VM instructions."""
-    if isinstance(node.children[1], ExpressionNode):  # void function
+    if isinstance(node.children[1], ExpressionNode):
       self.TranslateExpression(node.children[1])
-    else:
+    else:  # void function
       assert node.children[1] == SymbolNode(';')
       self.WritePush(VMSegment.CONSTANT, 0)
     self.Write('return')
@@ -354,9 +373,21 @@ class CodeWriter:
     if (node.children[1] == SymbolNode('.')
         or node.children[1] == SymbolNode('(')):
       self.TranslateSubroutineCall(node)
-    else:
-      assert node.children[1] == SymbolNode('[')
-      # TODO array access
+      return
+
+    arr = node.children[0]
+    assert isinstance(arr, IdentifierNode)
+    var = self.GetSymbol(arr.Value())
+    self.WritePush(VMSegmentFromKind(var.kind), var.index)
+
+    assert node.children[1] == SymbolNode('[')
+    expr = node.children[2]
+    assert isinstance(expr, ExpressionNode)
+    self.TranslateExpression(expr)
+    self.Write('add')
+
+    self.WritePop(VMSegment.POINTER, 1)
+    self.WritePush(VMSegment.THAT, 0)
 
   def TranslateSimpleTerm(self, node: TermNode):
     """Translate a `simple` term i.e. a term with only one child."""
@@ -373,7 +404,8 @@ class CodeWriter:
       for c in child.Value():
         char = ord(c)
         self.WritePush(VMSegment.CONSTANT, char)
-        self.WriteCall('String', 'appendChar', 1)
+        # First parameter is the "this" pointer for the String instance.
+        self.WriteCall('String', 'appendChar', 2)
     elif isinstance(child, KeywordNode):
       kw = child.Value()
       assert kw in KEYWORD_CONSTANTS
