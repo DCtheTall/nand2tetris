@@ -1,0 +1,96 @@
+// This file is part of www.nand2tetris.org
+// and the book "The Elements of Computing Systems"
+// by Nisan and Schocken, MIT Press.
+// File name: projects/12/Memory.jack
+
+/**
+ * This library provides two services: direct access to the computer's main
+ * memory (RAM), and allocation and recycling of memory blocks. The Hack RAM
+ * consists of 32,768 words, each holding a 16-bit binary number.
+ */ 
+class Memory {
+    static Array ram;
+    static Array heap;
+    static int heapStart;
+
+    /** Initializes the class. */
+    function void init() {
+        let ram = 0;
+        let heap = 2048;
+        let heap[0] = -1; // -1 indicates this is the last element in heapList.
+        let heap[1] = 14335; // length
+        let heapStart = 0;
+        return;
+    }
+
+    /** Returns the RAM value at the given address. */
+    function int peek(int address) {
+        return ram[address];
+    }
+
+    /** Sets the RAM value at the given address to the given value. */
+    function void poke(int address, int value) {
+        let ram[address] = value;
+        return;
+    }
+
+    /** Finds an available RAM block of the given size and returns
+     *  a reference to its base address. */
+    function int alloc(int size) {
+        var int cur, curNext, curSize, prev;
+
+        let cur = heapStart;
+        while (~(cur = -1)) {
+            let curNext = heap[cur];
+            let curSize = heap[cur + 1];
+
+            if (~(curSize < size + 2)) {
+                // 3 types of allocations:
+                // 1. Allocate from the head of the list.
+                // 2. Allocate from a segment that is not the first in the list.
+
+                // We will always want to do this in all 3 cases.
+                let heap[cur + 1] = size;
+
+                // Case 1: Allocate from the head of the list.
+                if (cur = heapStart) {
+                    let heapStart = cur + size + 2;
+                    let heap[heapStart] = curNext;
+                    let heap[heapStart + 1] = curSize - (size + 2);
+                // Case 2: Allocate that is not first in the list.
+                } else {
+                    let heap[prev] = cur + size + 2;
+                    let heap[heap[prev]] = curNext;
+                    let heap[heap[prev] + 1] = curSize - (size + 2);
+                }
+                
+                return heap + cur;
+            }
+
+            let prev = cur;
+            let cur = curNext;
+        }
+
+        // Out of memory!
+        do Sys.halt();
+        return 0;
+    }
+
+    /** De-allocates the given object (cast as an array) by making
+     *  it available for future allocations. */
+    function void deAlloc(Array o) {
+        var int last;
+        
+        // Traverse the linked list to the last segment.
+        let last = heapStart;
+        while (~(heap[last] = -1)) {
+            let last = heap[last];
+        }
+
+        // Append the segment storing `o` to the end of the list.
+        let heap[last] = o;
+        let heap[o] = -1;
+
+        return;
+    }    
+}
