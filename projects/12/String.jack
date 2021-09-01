@@ -13,18 +13,27 @@
 class String {
     field Array str;
     field int curLength;
+    field int maxLength;
 
     /** constructs a new empty string with a maximum length of maxLength
      *  and initial length of 0. */
-    constructor String new(int maxLength) {
-        let str = Array.new(maxLength);
+    constructor String new(int aMaxLength) {
+        let maxLength = aMaxLength;
         let curLength = 0;
+        if (maxLength = 0) {
+            return this;
+        }
+        let str = Array.new(maxLength);
+        return this;
     }
 
     /** Disposes this string. */
     method void dispose() {
-        do str.dispose();
+        if (maxLength > 0) {
+            do str.dispose();
+        }
         do Memory.deAlloc(this);
+        return;
     }
 
     /** Returns the current length of this string. */
@@ -40,17 +49,20 @@ class String {
     /** Sets the character at the j-th location of this string to c. */
     method void setCharAt(int j, char c) {
         let str[j] = c;
+        return;
     }
 
     /** Appends c to this string's end and returns this string. */
     method String appendChar(char c) {
         let str[curLength] = c;
         let curLength = curLength + 1;
+        return this;
     }
 
     /** Erases the last character from this string. */
     method void eraseLastChar() {
         let curLength = curLength - 1;
+        return;
     }
 
     /** Returns the integer value of this string, 
@@ -61,7 +73,7 @@ class String {
         let i = 0;
         let isNegative = false;
         if (curLength > 0) {
-            if (str[0] == 45) { // negative sign.
+            if (str[0] = 45) { // negative sign.
                 let isNegative = true;
                 let i = 1;
             }
@@ -81,18 +93,74 @@ class String {
     }
 
     /** Sets this string to hold a representation of the given value. */
-    method void setInt(int val) {
+    method void setInt(int i) {
+        var Array digits;
+        var boolean neg, loop;
+        var int powTen, digit, idx;
+
+        let str = Array.new(maxLength);
+        let curLength = 0;
+
+        if (i = 0) {
+            do appendChar(48);
+            return;
+        }
+        let neg = false;
+        if (i < 0) {
+            let neg = true;
+            let i = -i;
+        }
+
+        let digits = Array.new(5);  // log(2^15-1) ~= 4.5
+        let powTen = 1;
+        let loop = true;
+        let idx = 4;
+
+        while (loop) {
+            if (~((i / powTen) = 0)) {
+                let digit = i / powTen;
+                let digit = digit - (10 * (digit / 10));
+                let digits[idx] = digit;
+                let idx = idx - 1;
+            } else {
+                let digits[idx] = -1;
+                let idx = idx - 1;
+            }
+            if (powTen = 10000) {
+                let loop = false;
+            } else {
+                let powTen = 10 * powTen;
+            }
+        }
+
+        if (neg) {
+            do appendChar(45);  // Negative sign.
+        }
+
+        let idx = 0;
+        while (idx < 5) {
+            if (digits[idx] > -1) {
+                do appendChar(48 + digits[idx]);
+            }
+            let idx = idx + 1;
+        }
+
+        do digits.dispose();
+        return;
     }
 
     /** Returns the new line character. */
     function char newLine() {
+        return 128;
     }
 
     /** Returns the backspace character. */
     function char backSpace() {
+        return 129;
     }
 
     /** Returns the double quote (") character. */
     function char doubleQuote() {
+        return 34;
     }
 }

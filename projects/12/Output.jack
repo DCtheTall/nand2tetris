@@ -262,52 +262,10 @@ class Output {
     /** Displays the given integer starting at the cursor location,
      *  and advances the cursor appropriately. */
     function void printInt(int i) {
-        var Array digits;
-        var boolean loop;
-        var int powTen, digit, idx;
-
-        if (i = 0) {
-            do Output.printChar(48);
-            return;
-        }
-        if (i < 0) {
-            do Output.printChar(45);  // Negative sign.
-            let i = -i;
-        }
-
-        let digits = Array.new(5);  // log(2^15-1) ~= 4.5
-        let powTen = 1;
-        let loop = true;
-        let idx = 4;
-
-        while (loop) {
-            if (~((i / powTen) = 0)) {
-                let digit = i / powTen;
-                if (digit > 10) {
-                    let digit = digit - (10 * (digit / 10));
-                }
-                let digits[idx] = digit;
-                let idx = idx - 1;
-            } else {
-                let digits[idx] = -1;
-                let idx = idx - 1;
-            }
-            if (powTen = 10000) {
-                let loop = false;
-            } else {
-                let powTen = 10 * powTen;
-            }
-        }
-
-        let idx = 0;
-        while (idx < 5) {
-            if (digits[idx] > -1) {
-                do Output.printChar(48 + digits[idx]);
-            }
-            let idx = idx + 1;
-        }
-
-        do digits.dispose();
+        var String s;
+        let s = String.new(6);  // log(2^15-1) ~= 4.5
+        do s.setInt(i);
+        do Output.printString(s);
         return;
     }
 
