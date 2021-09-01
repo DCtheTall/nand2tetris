@@ -44,8 +44,8 @@ class Memory {
             let curNext = heap[cur];
             let curSize = heap[cur + 1];
 
-            if (~(curSize < size + 2)) {
-                // 3 types of allocations:
+            if (~(curSize < (size + 2))) {
+                // 2 types of allocations:
                 // 1. Allocate from the head of the list.
                 // 2. Allocate from a segment that is not the first in the list.
 
@@ -64,7 +64,7 @@ class Memory {
                     let heap[heap[prev] + 1] = curSize - (size + 2);
                 }
                 
-                return heap + cur;
+                return cur + (heap + 2);
             }
 
             let prev = cur;
@@ -72,25 +72,43 @@ class Memory {
         }
 
         // Out of memory!
-        do Sys.halt();
-        return 0;
+        return -1;
     }
 
     /** De-allocates the given object (cast as an array) by making
      *  it available for future allocations. */
     function void deAlloc(Array o) {
-        var int last;
-        
-        // Traverse the linked list to the last segment.
-        let last = heapStart;
-        while (~(heap[last] = -1)) {
-            let last = heap[last];
+        var int addr, cur, prev;
+
+        let addr = o - (heap + 2);
+
+        if (heapStart > addr) {
+            // Defrag
+            if (heapStart = (addr + heap[addr + 1] + 2)) {
+                let heap[addr + 1] = heap[addr + 1] + heap[heapStart + 1] + 2;
+            } else {
+                let heap[addr] = heapStart;
+            }
+            let heapStart = addr;
+            return;
         }
 
-        // Append the segment storing `o` to the end of the list.
-        let heap[last] = o;
-        let heap[o] = -1;
+        let cur = heapStart;
+
+        // Traverse linked list until first segment whose address is gt addr.
+        while ((cur < addr) & ~(cur = -1)) {
+            let prev = cur;
+            let cur = heap[cur];
+        }
+
+        // Defrag
+        if (addr = (heap[prev] + heap[prev + 1] + 2)) {
+            let heap[prev + 1] = heap[prev + 1] + heap[addr + 1] + 2;
+        } else {
+            let heap[prev] = addr;
+            let heap[addr] = cur;
+        }
 
         return;
-    }    
+    }
 }
