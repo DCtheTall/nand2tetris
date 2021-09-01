@@ -17,19 +17,44 @@
 class Output {
 
     // Character map for displaying characters
-    static Array charMaps; 
+    static Array charMaps;
+
+    static int cursorRow;
+    static int cursorCol;
+
+    static int cellWidth;
+    static int cellHeight;
+
+    static Array twoToThe;
 
     /** Initializes the screen, and locates the cursor at the screen's top-left. */
     function void init() {
+        var int i, x;
+
         do Output.initMap();
+
+        let cursorRow = 0;
+        let cursorCol = 0;
+
+        let cellWidth = 8;
+        let cellHeight = 11;
+
+        let twoToThe = Array.new(16);
+        let i = 0;
+        let x = 1;
+        while (i < 16) {
+            let twoToThe[i] = x;
+            let x = x + x;
+            let i = i + 1;
+        }
+
+        return;
     }
 
     // Initializes the character map array
     function void initMap() {
-        var int i;
-    
         let charMaps = Array.new(127);
-        
+
         // Black square, used for displaying non-printable characters.
         do Output.create(0,63,63,63,63,63,63,63,63,63,0,0);
 
@@ -72,7 +97,7 @@ class Output {
         do Output.create(64,30,51,51,59,59,59,27,3,30,0,0);  // @
         do Output.create(63,30,51,51,24,12,12,0,12,12,0,0);  // ?
 
-        do Output.create(65,0,0,0,0,0,0,0,0,0,0,0);          // A ** TO BE FILLED **
+        do Output.create(65,12,30,51,51,63,51,51,51,51,0,0); // A
         do Output.create(66,31,51,51,51,31,51,51,51,31,0,0); // B
         do Output.create(67,28,54,35,3,3,3,35,54,28,0,0);    // C
         do Output.create(68,15,27,51,51,51,51,51,27,15,0,0); // D
@@ -138,7 +163,7 @@ class Output {
         do Output.create(125,7,12,12,12,56,12,12,12,7,0,0);    // }
         do Output.create(126,38,45,25,0,0,0,0,0,0,0,0);        // ~
 
-	return;
+        return;
     }
 
     // Creates the character map array of the given character index, using the given values.
@@ -177,28 +202,134 @@ class Output {
     /** Moves the cursor to the j-th column of the i-th row,
      *  and erases the character displayed there. */
     function void moveCursor(int i, int j) {
+        let cursorRow = i;
+        let cursorCol = j;
+        return;
     }
 
     /** Displays the given character at the cursor location,
      *  and advances the cursor one column forward. */
     function void printChar(char c) {
+        var Array map;
+        var int colIdx, rowIdx, row;
+
+        do Screen.setColor(false);
+        do Screen.drawRectangle(
+                cursorCol * cellWidth, cursorRow * cellHeight,
+                (cursorCol + 1) * cellWidth - 1, (cursorRow + 1) * cellHeight - 1);
+        do Screen.setColor(true);
+
+        let map = Output.getMap(c);
+        let colIdx = 0;
+        while (colIdx < cellHeight) {
+            let rowIdx = 0;
+            let row = map[colIdx];
+            while (rowIdx < cellWidth) {
+                if (~((row & twoToThe[rowIdx]) = 0)) {
+                    do Screen.drawPixel(
+                            cursorCol * cellWidth + rowIdx, cursorRow * cellHeight + colIdx);
+                }
+                let rowIdx = rowIdx + 1;
+            }
+            let colIdx = colIdx + 1;
+        }
+
+        let cursorCol = cursorCol + 1;
+        if (cursorCol = 64) {
+            let cursorCol = 0;
+            let cursorRow = cursorRow + 1;
+            if (cursorRow = 23) {
+                let cursorRow = 0;
+            }
+        }
+
+        return;
     }
 
     /** displays the given string starting at the cursor location,
      *  and advances the cursor appropriately. */
     function void printString(String s) {
+        var int i, len;
+        let i = 0;
+        let len = s.length();
+        while (i < len) {
+            do Output.printChar(s.charAt(i));
+            let i = i + 1;
+        }
+        return;
     }
 
     /** Displays the given integer starting at the cursor location,
      *  and advances the cursor appropriately. */
     function void printInt(int i) {
+        var Array digits;
+        var boolean loop;
+        var int powTen, digit, idx;
+
+        if (i = 0) {
+            do Output.printChar(48);
+            return;
+        }
+        if (i < 0) {
+            do Output.printChar(45);  // Negative sign.
+            let i = -i;
+        }
+
+        let digits = Array.new(5);  // log(2^15-1) ~= 4.5
+        let powTen = 1;
+        let loop = true;
+        let idx = 4;
+
+        while (loop) {
+            if (~((i / powTen) = 0)) {
+                let digit = i / powTen;
+                if (digit > 10) {
+                    let digit = digit - (10 * (digit / 10));
+                }
+                let digits[idx] = digit;
+                let idx = idx - 1;
+            } else {
+                let digits[idx] = -1;
+                let idx = idx - 1;
+            }
+            if (powTen = 10000) {
+                let loop = false;
+            } else {
+                let powTen = 10 * powTen;
+            }
+        }
+
+        let idx = 0;
+        while (idx < 5) {
+            if (digits[idx] > -1) {
+                do Output.printChar(48 + digits[idx]);
+            }
+            let idx = idx + 1;
+        }
+
+        do digits.dispose();
+        return;
     }
 
     /** Advances the cursor to the beginning of the next line. */
     function void println() {
+        let cursorRow = cursorRow + 1;
+        let cursorCol = 0;
+        return;
     }
 
     /** Moves the cursor one column back. */
     function void backSpace() {
+        let cursorCol = cursorCol - 1;
+        if (cursorCol < 0) {
+            let cursorRow = cursorRow - 1;
+            let cursorCol = 0;
+        }
+        do Screen.setColor(false);
+        do Screen.drawRectangle(
+                cursorCol * cellWidth, cursorRow * cellHeight,
+                (cursorCol + 1) * cellWidth - 1, (cursorRow + 1) * cellHeight - 1);
+        do Screen.setColor(true);
+        return;
     }
 }
