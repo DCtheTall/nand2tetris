@@ -10,6 +10,7 @@ class Keyboard {
 
     /** Initializes the keyboard. */
     function void init() {
+        return;
     } 
 
     /**
@@ -42,6 +43,15 @@ class Keyboard {
      * of the pressed key.
      */
     function char readChar() {
+        var char c;
+        while (Keyboard.keyPressed() = 0) {
+            do Sys.wait(0);
+        }
+        let c = Keyboard.keyPressed();
+        while (Keyboard.keyPressed() = c) {
+            do Sys.wait(0);
+        }
+        return c;
     }
 
     /**								
@@ -50,6 +60,33 @@ class Keyboard {
      * and returns its value. Also handles user backspaces.
      */
     function String readLine(String message) {
+        var char c;
+        var String s, result;
+        var int i;
+
+        do Output.printString(message);
+        do Output.println();
+
+        let c = Keyboard.readChar();
+        let s = String.new(64);
+        let i = 0;
+
+        while ((~(c = String.newLine())) & (i < 64)) {
+            if ((c = String.backSpace()) & (s.length() > 0)) {
+                do s.eraseLastChar();
+            } else {
+                do s.appendChar(c);
+            }
+            let c = Keyboard.readChar();
+        }
+        let result = String.new(s.length());
+        let i = 0;
+        while (i < s.length()) {
+            do result.appendChar(s.charAt(i));
+            let i = i + 1;
+        }
+        do s.dispose();
+        return result;
     }   
 
     /**								
@@ -59,5 +96,28 @@ class Keyboard {
      * entered text is detected). Also handles user backspaces. 
      */
     function int readInt(String message) {
+        var char c;
+        var boolean loop;
+        var String s;
+        do Output.printString(message);
+        do Output.println();
+        let c = Keyboard.readChar();
+        let loop = true;
+        let s = String.new(6);
+        while (loop) {
+            if ((c > 47) & (c < 58)) {
+                do s.appendChar(c);
+            } else {
+                if ((s.length() = 0) & (c = 45)) {
+                    do s.appendChar(c);
+                } else {
+                    let loop = false;
+                }
+            }
+            if (loop) {
+                let c = Keyboard.readChar();
+            }
+        }
+        return s.intValue();
     }
 }
