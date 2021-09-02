@@ -1,5 +1,6 @@
 *
 !.gitignore
+!README.md
 !projects/
 !projects/01/
 !projects/01/*.hdl
