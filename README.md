@@ -44,11 +44,11 @@ This repository contains working code for the projects for [Nand2Tetris](https:/
 
 `projects/09/Tetris/` contains a Jack implementation of the game Tetris.
 
-### 10. Jack compilter I
+### 10. Jack compiler I
 
 `projects/10/` contains a Python implementation of a Jack analyzer, `JackAnalyzer.py`, which parses Jack code and outputs the abstract syntax tree as XML.
 
-### 11. Jack compilter II
+### 11. Jack compiler II
 
 `projects/11/` contains a Python implementation of a Jack compiler, `JackCompiler.py`, which compiles Jack code into VM instructions.
 
